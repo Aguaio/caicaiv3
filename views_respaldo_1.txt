@@ -1,0 +1,296 @@
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.db.models import Q
+from django.views.decorators.cache import never_cache
+from decimal import Decimal
+from .models import AdminUser, Categoria, Producto, Pedido, DetallePedido, Cliente
+from .decorators import admin_required
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout, get_user_model
+
+
+# ------------------- PÁGINAS PÚBLICAS -------------------
+
+def home(request):
+    return render(request, 'core/home.html')
+
+
+def catalogo(request):
+    query = request.GET.get('q')
+    categoria_id = request.GET.get('categoria')
+
+    productos = Producto.objects.all()
+    categorias = Categoria.objects.all()
+
+    if categoria_id:
+        productos = productos.filter(categoria_id=categoria_id)
+
+    if query:
+        productos = productos.filter(
+            Q(nombre__icontains=query) | Q(descripcion__icontains=query)
+        )
+
+    return render(request, 'core/catalogo.html', {
+        'productos': productos,
+        'categorias': categorias,
+        'categoria_id': categoria_id,
+        'query': query,
+    })
+
+
+# ------------------- LOGIN UNIFICADO -------------------
+
+def login_unificado(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+        if user:
+            login(request, user)
+            if user.is_staff:  # si es admin
+                return redirect('admin_dashboard')
+            return redirect('catalogo')  # cliente normal
+        else:
+            # Si no es un usuario de Django, probar AdminUser manual
+            admin = AdminUser.objects.filter(username=username, password=password).first()
+            if admin:
+                request.session['admin_id'] = admin.id
+                return redirect('admin_dashboard')
+
+        messages.error(request, 'Usuario o contraseña incorrectos.')
+
+    return render(request, 'core/login.html')
+
+
+def logout_unificado(request):
+    logout(request)
+    request.session.flush()
+    return redirect('login_unificado')
+
+# ------------------- REGISTRO CLIENTE -------------------
+
+User = get_user_model()
+
+def registro_cliente(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        correo = request.POST.get('correo')
+        direccion = request.POST.get('direccion')
+        telefono = request.POST.get('telefono')
+
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Ese usuario ya existe.')
+        else:
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=correo,
+                direccion=direccion,
+                telefono=telefono
+            )
+            login(request, user)
+            return redirect('catalogo')
+    return render(request, 'core/registro_cliente.html')
+
+
+
+# ------------------- PANEL ADMIN -------------------
+
+@admin_required
+@never_cache
+def admin_dashboard(request):
+    return render(request, 'core/admin_dashboard.html')
+
+
+# ----- CRUD Categorías -----
+
+@admin_required
+def categorias_list(request):
+    categorias = Categoria.objects.all()
+    return render(request, 'core/categorias_list.html', {'categorias': categorias})
+
+
+@admin_required
+def categoria_create(request):
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        if nombre:
+            Categoria.objects.create(nombre=nombre)
+            return redirect('categorias_list')
+    return render(request, 'core/categoria_form.html')
+
+
+@admin_required
+def categoria_edit(request, id):
+    categoria = Categoria.objects.get(id=id)
+    if request.method == 'POST':
+        categoria.nombre = request.POST.get('nombre')
+        categoria.save()
+        return redirect('categorias_list')
+    return render(request, 'core/categoria_form.html', {'categoria': categoria})
+
+
+@admin_required
+def categoria_delete(request, id):
+    Categoria.objects.get(id=id).delete()
+    return redirect('categorias_list')
+
+
+# ----- CRUD Productos -----
+
+@admin_required
+def productos_list(request):
+    productos = Producto.objects.all()
+    return render(request, 'core/productos_list.html', {'productos': productos})
+
+
+@admin_required
+def producto_create(request):
+    categorias = Categoria.objects.all()
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre')
+        descripcion = request.POST.get('descripcion')
+        precio = request.POST.get('precio')
+        stock = request.POST.get('stock')
+        categoria_id = request.POST.get('categoria')
+        imagen = request.FILES.get('imagen')
+
+        categoria = Categoria.objects.get(id=categoria_id)
+        Producto.objects.create(
+            nombre=nombre,
+            descripcion=descripcion,
+            precio=precio,
+            stock=stock,
+            categoria=categoria,
+            imagen=imagen
+        )
+        return redirect('productos_list')
+    return render(request, 'core/producto_form.html', {'categorias': categorias})
+
+
+@admin_required
+def producto_edit(request, id):
+    producto = Producto.objects.get(id=id)
+    categorias = Categoria.objects.all()
+    if request.method == 'POST':
+        producto.nombre = request.POST.get('nombre')
+        producto.descripcion = request.POST.get('descripcion')
+        producto.precio = request.POST.get('precio')
+        producto.stock = request.POST.get('stock')
+        producto.categoria_id = request.POST.get('categoria')
+        if request.FILES.get('imagen'):
+            producto.imagen = request.FILES.get('imagen')
+        producto.save()
+        return redirect('productos_list')
+    return render(request, 'core/producto_form.html', {'producto': producto, 'categorias': categorias})
+
+
+@admin_required
+def producto_delete(request, id):
+    Producto.objects.get(id=id).delete()
+    return redirect('productos_list')
+
+
+# ------------------- PEDIDOS (ADMIN) -------------------
+
+@admin_required
+def pedidos_list(request):
+    pedidos = Pedido.objects.all().order_by('-fecha')
+    return render(request, 'core/pedidos_list.html', {'pedidos': pedidos})
+
+
+@admin_required
+def pedido_detalle(request, id):
+    pedido = Pedido.objects.get(id=id)
+    detalles = pedido.detalles.all()
+    if request.method == 'POST':
+        nuevo_estado = request.POST.get('estado')
+        pedido.estado = nuevo_estado
+        pedido.save()
+        return redirect('pedidos_list')
+    return render(request, 'core/pedido_detalle.html', {'pedido': pedido, 'detalles': detalles})
+
+
+@login_required
+def mis_pedidos(request):
+    pedidos = Pedido.objects.filter(nombre_cliente=request.user.username).order_by('-fecha')
+    return render(request, 'core/mis_pedidos.html', {'pedidos': pedidos})
+
+
+# ------------------- CARRITO Y PEDIDOS CLIENTE -------------------
+
+def agregar_al_carrito(request, id):
+    carrito = request.session.get('carrito', {})
+    carrito[str(id)] = carrito.get(str(id), 0) + 1
+    request.session['carrito'] = carrito
+    return redirect('ver_carrito')
+
+
+def eliminar_del_carrito(request, id):
+    carrito = request.session.get('carrito', {})
+    if str(id) in carrito:
+        del carrito[str(id)]
+        request.session['carrito'] = carrito
+    return redirect('ver_carrito')
+
+
+def ver_carrito(request):
+    carrito = request.session.get('carrito', {})
+    productos = []
+    total = Decimal(0)
+
+    for id, cantidad in carrito.items():
+        producto = Producto.objects.get(id=id)
+        subtotal = producto.precio * cantidad
+        total += subtotal
+        productos.append({
+            'id': producto.id,
+            'nombre': producto.nombre,
+            'precio': producto.precio,
+            'cantidad': cantidad,
+            'subtotal': subtotal
+        })
+
+    return render(request, 'core/carrito.html', {'productos': productos, 'total': total})
+
+
+@login_required
+def confirmar_pedido(request):
+    carrito = request.session.get('carrito', {})
+    if not carrito:
+        return redirect('catalogo')
+
+    cliente = request.user
+
+    if request.method == 'POST':
+        pedido = Pedido.objects.create(
+            nombre_cliente=cliente.username,
+            correo=cliente.email or '',
+            direccion=cliente.direccion or 'Sin dirección',
+            total=0
+        )
+
+        total = Decimal(0)
+        for id, cantidad in carrito.items():
+            producto = Producto.objects.get(id=id)
+            subtotal = producto.precio * cantidad
+            total += subtotal
+
+            DetallePedido.objects.create(
+                pedido=pedido,
+                producto=producto,
+                cantidad=cantidad,
+                subtotal=subtotal
+            )
+
+            producto.stock -= cantidad
+            producto.save()
+
+        pedido.total = total
+        pedido.save()
+        request.session['carrito'] = {}
+        return render(request, 'core/pedido_confirmado.html', {'pedido': pedido})
+
+    return render(request, 'core/confirmar_pedido.html')
