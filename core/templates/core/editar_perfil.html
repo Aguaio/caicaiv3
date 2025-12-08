@@ -1,0 +1,170 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Mi perfil — Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .success { background-color: #dcfce7; color: #166534; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+    .error   { background-color: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between gap-4">
+        <button
+          onclick="window.location.href='{% url 'catalogo' %}'"
+          class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm"
+        >
+          <span class="text-lg">←</span>
+          <span class="font-medium">Volver al catálogo</span>
+        </button>
+
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm text-gray-700 space-y-1">
+          {% if user.is_authenticated %}
+            <p>
+              Sesión: <strong>{{ user.username }}</strong>
+              {% if user.bloqueado %}
+                <span class="text-red-600 font-semibold">(bloqueado)</span>
+              {% endif %}
+            </p>
+            <p>
+              <a href="{% url 'mis_pedidos' %}" class="hover:text-gray-900">Mis pedidos</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-900 font-semibold">Cerrar sesión</a>
+            </p>
+          {% else %}
+            <p>
+              <a href="{% url 'login_unificado' %}" class="hover:text-gray-900 font-semibold">Iniciar sesión</a> ·
+              <a href="{% url 'registro_cliente' %}" class="hover:text-gray-900">Registrarse</a>
+            </p>
+          {% endif %}
+
+          <p class="mt-2 flex justify-end items-center gap-1 text-xs">
+            <span class="font-medium">Carrito:</span>
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold">
+              {{ cart_count|default:0 }}
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="py-10">
+    <div class="max-w-3xl mx-auto px-4">
+
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold mb-2">Mi perfil</h1>
+        <p class="text-sm text-gray-600">
+          Aquí puedes actualizar tus datos personales de cliente para tus compras en Caicai.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-xl p-6 sm:p-8">
+        <form method="post" class="space-y-5">
+          {% csrf_token %}
+
+          <div>
+            <label class="block text-sm font-medium mb-2">Nombre de usuario *</label>
+            <input
+              type="text"
+              name="username"
+              value="{{ user.username }}"
+              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm"
+              required
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-2">Correo electrónico *</label>
+            <input
+              type="email"
+              name="correo"
+              value="{{ user.email }}"
+              class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm"
+              required
+            >
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Dirección</label>
+              <input
+                type="text"
+                name="direccion"
+                value="{{ user.direccion|default_if_none:'' }}"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm"
+                placeholder="Calle, número, depto, ciudad"
+              >
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Teléfono</label>
+              <input
+                type="text"
+                name="telefono"
+                value="{{ user.telefono|default_if_none:'' }}"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm"
+                placeholder="+56 9 XXXXXXXX"
+              >
+            </div>
+          </div>
+
+          <div class="border-t pt-4 mt-2">
+            <p class="text-xs text-gray-500 mb-2">
+              La contraseña no se muestra por seguridad. Si quieres cambiarla, usa la opción de abajo.
+            </p>
+            <a
+              href="{% url 'cambiar_password_por_usuario_correo' %}"
+              class="inline-flex items-center text-sm font-semibold text-amber-700 hover:text-amber-800"
+            >
+              Cambiar contraseña
+            </a>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-3 pt-4">
+            <button
+              type="submit"
+              class="flex-1 bg-gray-900 text-white py-2.5 rounded-lg font-semibold hover:bg-gray-800 transition-colors text-sm"
+            >
+              Guardar cambios
+            </button>
+            <button
+              type="button"
+              onclick="window.location.href='{% url 'catalogo' %}'"
+              class="flex-1 bg-gray-200 text-gray-700 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-sm"
+            >
+              Volver a la tienda
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white border-t py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      © 2025 Caicai® — Cuenta de cliente
+    </div>
+  </footer>
+
+</body>
+</html>

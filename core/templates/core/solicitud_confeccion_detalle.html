@@ -1,0 +1,169 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Detalle solicitud confección — Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .success { background-color: #dcfce7; color: #166534; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+    .error   { background-color: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER ADMIN SIMPLE -->
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <button
+          onclick="window.location.href='{% url 'home' %}'"
+          class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">⌂</span>
+          <span class="font-medium">Ver tienda</span>
+        </button>
+
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm text-gray-700">
+          {% if user.is_authenticated %}
+            <p>Sesión: <strong>{{ user.username }}</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-700 font-semibold">Panel</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% elif request.session.admin_id %}
+            <p>Sesión: <strong>Admin</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-700 font-semibold">Panel</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
+        <div>
+          <p class="uppercase tracking-wide font-semibold text-gray-600">Detalle de solicitud</p>
+          <p>Gestiona el estado y observaciones de la solicitud de confección.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="py-10">
+    <div class="max-w-4xl mx-auto px-4">
+
+      <!-- Nav interno panel -->
+      <nav class="flex flex-wrap gap-3 text-xs sm:text-sm text-gray-600 mb-4">
+        <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
+        <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
+        <a href="{% url 'categorias_list' %}" class="hover:text-gray-900">Categorías</a>
+        <a href="{% url 'pedidos_list' %}" class="hover:text-gray-900">Pedidos</a>
+        <a href="{% url 'clientes_list' %}" class="hover:text-gray-900">Clientes</a>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
+        <span class="font-semibold text-gray-900">Confección</span>
+      </nav>
+
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="mb-6">
+        <h1 class="text-2xl sm:text-3xl font-bold mb-2">
+          Detalle de solicitud de confección
+        </h1>
+        <p class="text-sm text-gray-600">
+          Código: <span class="font-mono">{{ solicitud.id }}</span> ·
+          Fecha: {{ solicitud.fecha_creacion|date:"d/m/Y H:i" }}
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Columna izquierda: datos de la solicitud -->
+        <section class="bg-white rounded-lg shadow p-5 sm:p-6 text-sm space-y-2">
+          <h2 class="text-lg font-semibold mb-3">Datos del cliente</h2>
+          <p><span class="font-semibold">Nombre:</span> {{ solicitud.nombre }}</p>
+          <p><span class="font-semibold">Correo:</span> {{ solicitud.correo }}</p>
+          <p><span class="font-semibold">Teléfono:</span> {{ solicitud.telefono }}</p>
+
+          <hr class="my-3">
+
+          <h3 class="text-sm font-semibold mb-1">Detalles de la prenda</h3>
+          <p><span class="font-semibold">Tipo de prenda:</span> {{ solicitud.get_tipo_prenda_display }}</p>
+          <p class="mt-2"><span class="font-semibold">Descripción del diseño:</span></p>
+          <p class="mt-1 whitespace-pre-line text-gray-700">
+            {{ solicitud.descripcion_diseno }}
+          </p>
+        </section>
+
+        <!-- Columna derecha: formulario de estado y observaciones -->
+        <section class="bg-white rounded-lg shadow p-5 sm:p-6">
+          <h2 class="text-lg font-semibold mb-4">Gestión de la solicitud</h2>
+
+          <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            <div>
+              <label class="block text-sm font-medium mb-2">
+                Estado de la solicitud
+              </label>
+              <select
+                name="estado"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300"
+              >
+                {% for value, label in estados %}
+                  <option value="{{ value }}" {% if solicitud.estado == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium mb-2">
+                Observaciones internas (solo administrador)
+              </label>
+              <textarea
+                name="observaciones_admin"
+                rows="5"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm"
+                placeholder="Comentarios sobre la revisión, cotización, motivos de rechazo, etc."
+              >{{ solicitud.observaciones_admin }}</textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                type="submit"
+                class="flex-1 bg-gray-900 text-white py-2.5 rounded-lg font-semibold hover:bg-gray-800 transition-colors text-sm"
+              >
+                Guardar cambios
+              </button>
+              <a
+                href="{% url 'solicitudes_confeccion_list' %}"
+                class="flex-1 text-center bg-gray-200 text-gray-700 py-2.5 rounded-lg font-semibold hover:bg-gray-300 transition-colors text-sm"
+              >
+                Volver al listado
+              </a>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white border-t py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      © 2025 Caicai — Panel administrador
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pedido #{{ pedido.id }} — Panel Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <button
+          onclick="window.location.href='{% url 'home' %}'"
+          class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">⌂</span>
+          <span class="font-medium">Ver tienda</span>
+        </button>
+
+        <div class="w-20 h-20 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-lg">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>Sesión: <strong>{{ user.username }}</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-700 font-semibold">Panel</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% elif request.session.admin_id %}
+            <p>Sesión: <strong>Admin</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-700 font-semibold">Panel</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
+        <div>
+          <p class="uppercase tracking-wide font-semibold text-gray-600">Detalle de pedido</p>
+          <p>Consulta información del pedido y actualiza su estado.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="py-8">
+    <div class="max-w-6xl mx-auto px-4 space-y-6">
+
+      <!-- Nav interno panel -->
+      <nav class="flex flex-wrap gap-3 text-xs sm:text-sm text-gray-600">
+        <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
+        <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
+        <a href="{% url 'categorias_list' %}" class="hover:text-gray-900">Categorías</a>
+        <a href="{% url 'pedidos_list' %}" class="font-semibold text-gray-900">Pedidos</a>
+        <a href="{% url 'clientes_list' %}" class="hover:text-gray-900">Clientes</a>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
+        <a href="{% url 'solicitudes_confeccion_list' %}" class="hover:text-gray-900">Confección</a>
+      </nav>
+      
+      <!-- MENSAJES -->
+      {% if messages %}
+        <div>
+          {% for m in messages %}
+            <div class="mb-2 px-4 py-2 rounded-lg text-sm
+                        {% if m.tags == 'success' %}bg-emerald-50 text-emerald-700
+                        {% elif m.tags == 'error' %}bg-red-50 text-red-700
+                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+              {{ m }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- ENCABEZADO -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 class="text-2xl font-bold">Pedido #{{ pedido.id }}</h1>
+          <p class="text-sm text-gray-600">
+            Realizado el {{ pedido.fecha|date:"d/m/Y H:i" }}
+          </p>
+          {% if bloqueado %}
+            <p class="mt-1 text-xs font-semibold text-red-600">
+              Este cliente se encuentra actualmente bloqueado.
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Estado actual en badge -->
+        <div class="mt-3 sm:mt-0">
+          {% if pedido.estado == 'pendiente' %}
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700">
+              Estado actual: Pendiente
+            </span>
+          {% elif pedido.estado == 'en_proceso' %}
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+              Estado actual: En proceso
+            </span>
+          {% elif pedido.estado == 'finalizado' %}
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-green-50 text-green-700">
+              Estado actual: Finalizado
+            </span>
+          {% elif pedido.estado == 'rechazado' %}
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-red-50 text-red-700">
+              Estado actual: Rechazado
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- INFORMACIÓN DEL CLIENTE -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4">Datos del cliente</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div>
+            <p class="text-gray-500">Nombre</p>
+            <p class="font-medium text-gray-900">{{ pedido.nombre_cliente }}</p>
+          </div>
+          <div>
+            <p class="text-gray-500">Correo electrónico</p>
+            <p class="font-medium text-gray-900">{{ pedido.correo }}</p>
+          </div>
+          <div class="sm:col-span-2">
+            <p class="text-gray-500">Dirección</p>
+            <p class="font-medium text-gray-900">{{ pedido.direccion }}</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- DETALLE DEL PEDIDO -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4">Detalle del pedido</h2>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+              <tr>
+                <th class="px-4 py-2 text-left">Producto</th>
+                <th class="px-4 py-2 text-center">Cantidad</th>
+                <th class="px-4 py-2 text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for d in detalles %}
+                <tr>
+                  <td class="px-4 py-2">{{ d.producto.nombre }}</td>
+                  <td class="px-4 py-2 text-center">{{ d.cantidad }}</td>
+                  <td class="px-4 py-2 text-right">${{ d.subtotal }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="3" class="px-4 py-4 text-center text-gray-500 text-sm">
+                    No hay ítems en este pedido.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="bg-gray-50">
+              <tr>
+                <td class="px-4 py-2 text-right font-semibold" colspan="2">Total</td>
+                <td class="px-4 py-2 text-right font-bold">${{ pedido.total }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- FORMULARIO CAMBIAR ESTADO -->
+      <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 class="text-lg font-semibold mb-4">Cambiar estado del pedido</h2>
+
+        <form method="post" class="space-y-4">
+          {% csrf_token %}
+
+          <div class="max-w-xs">
+            <label for="estado" class="block text-sm font-medium mb-2">Estado</label>
+            <select
+              id="estado"
+              name="estado"
+              onchange="toggleMotivo()"
+              class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400">
+              <option value="pendiente" {% if pedido.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+              <option value="en_proceso" {% if pedido.estado == 'en_proceso' %}selected{% endif %}>En Proceso</option>
+              <option value="finalizado" {% if pedido.estado == 'finalizado' %}selected{% endif %}>Finalizado</option>
+              <option value="rechazado" {% if pedido.estado == 'rechazado' %}selected{% endif %}>Rechazado</option>
+            </select>
+          </div>
+
+          <div id="motivoBox" class="mt-2 {% if pedido.estado != 'rechazado' %}hidden{% endif %}">
+            <label for="motivo" class="block text-sm font-medium mb-2">Motivo del rechazo</label>
+            <textarea
+              id="motivo"
+              name="motivo"
+              rows="3"
+              class="w-full max-w-xl px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-300"
+              placeholder="Ejemplo: datos de envío incorrectos, pago no confirmado, etc.">{{ pedido.motivo_rechazo }}</textarea>
+          </div>
+
+          <div class="pt-4 flex flex-col sm:flex-row gap-3">
+            <button
+              type="submit"
+              class="flex-1 bg-gray-900 text-white py-3 rounded-lg font-semibold text-sm hover:bg-gray-800">
+              Guardar cambios
+            </button>
+            <button
+              type="button"
+              onclick="window.location.href='{% url 'pedidos_list' %}'"
+              class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold text-sm hover:bg-gray-300">
+              Volver sin guardar
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    function toggleMotivo() {
+      const sel = document.getElementById('estado');
+      const box = document.getElementById('motivoBox');
+      if (!sel || !box) return;
+      box.classList.toggle('hidden', sel.value !== 'rechazado');
+    }
+    toggleMotivo();
+  </script>
+</body>
+</html>

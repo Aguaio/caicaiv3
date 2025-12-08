@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>{% if producto %}Editar{% else %}Nuevo{% endif %} producto — Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <button onclick="window.location.href='{% url 'productos_list' %}'"
+                class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">⌂</span>
+          <span class="font-medium">Volver a productos</span>
+        </button>
+
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>Sesión: <strong>{{ user.username }}</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="py-10">
+    <div class="max-w-3xl mx-auto px-4">
+      <h1 class="text-2xl font-bold mb-2">
+        {% if producto %}Editar producto{% else %}Nuevo producto{% endif %}
+      </h1>
+      <p class="text-sm text-gray-600 mb-6">
+        Completa los datos del producto. Estos campos se mostrarán en el catálogo de Caicai.
+      </p>
+
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+          {% for m in messages %}
+            <div class="px-4 py-2 rounded-lg text-sm
+                        {% if m.tags == 'success' %}bg-emerald-50 text-emerald-700
+                        {% else %}bg-red-50 text-red-700{% endif %}">
+              {{ m }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data"
+            class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8 space-y-5">
+        {% csrf_token %}
+
+        <!-- Nombre -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Nombre *</label>
+          <input
+            type="text"
+            name="nombre"
+            required
+            value="{{ values.nombre|default:'' }}"
+            class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
+          >
+        </div>
+
+        <!-- Categoría -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Categoría *</label>
+          <div class="w-full max-w-xs">
+            <select
+              name="categoria"
+              required
+              class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400">
+              <option value="">Selecciona categoría</option>
+              {% with selected_id=values.categoria|default:'' %}
+                {% for c in categorias %}
+                  <option value="{{ c.id }}" {% if selected_id|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>
+                    {{ c.nombre }}
+                  </option>
+                {% endfor %}
+              {% endwith %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Precio / Stock -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-2">Precio *</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              name="precio"
+              required
+              value="{{ values.precio|default:'' }}"
+              class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
+            >
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-2">Stock</label>
+            <input
+              type="number"
+              step="1"
+              min="0"
+              name="stock"
+              value="{{ values.stock|default:'' }}"
+              class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
+            >
+          </div>
+        </div>
+
+        <!-- Descripción -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Descripción</label>
+          <textarea
+            name="descripcion"
+            rows="4"
+            class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
+          >{{ values.descripcion|default:'' }}</textarea>
+        </div>
+
+        <!-- Imagen -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Imagen</label>
+          <input type="file" name="imagen"
+                 class="block w-full text-sm text-gray-700">
+          {% if producto and producto.imagen %}
+            <p class="text-xs text-gray-500 mt-1">
+              Imagen actual:
+              <a href="{{ producto.imagen.url }}" target="_blank" class="underline">ver imagen</a>
+            </p>
+          {% endif %}
+        </div>
+
+        <div class="pt-4 flex flex-col sm:flex-row gap-3">
+          <button type="submit"
+                  class="flex-1 bg-gray-900 text-white py-3 rounded-lg font-semibold text-sm hover:bg-gray-800">
+            Guardar
+          </button>
+          <button type="button"
+                  onclick="window.location.href='{% url 'productos_list' %}'"
+                  class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold text-sm hover:bg-gray-300">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

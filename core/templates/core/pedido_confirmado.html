@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pedido confirmado — Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-6 flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <button onclick="window.location.href='{% url 'catalogo' %}'"
+                class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">⌂</span>
+          <span class="font-medium">Volver al catálogo</span>
+        </button>
+
+        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>Sesión: <strong>{{ user.username }}</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% elif request.session.admin_id %}
+            <p>Sesión: <strong>Admin</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-12">
+    <div class="bg-white rounded-2xl shadow-lg p-6 sm:p-10">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-teal-600 font-semibold">Pedido confirmado</p>
+          <h1 class="text-2xl sm:text-3xl font-bold mt-1">¡Gracias por tu compra, {{ pedido.nombre_cliente }}!</h1>
+          <p class="text-sm text-gray-600 mt-2">
+            Tu pedido se generó con estado <strong>pendiente</strong>. Te avisaremos cuando cambie su estado.
+          </p>
+        </div>
+        <div class="bg-teal-50 text-teal-800 px-4 py-3 rounded-lg text-sm font-semibold">
+          N° pedido: #{{ pedido.id }}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <section class="space-y-3">
+          <h2 class="font-semibold text-lg">Resumen</h2>
+          <div class="bg-gray-50 border rounded-lg p-4 text-sm space-y-2">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Cliente</span>
+              <span class="font-medium">{{ pedido.nombre_cliente }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Correo</span>
+              <span class="font-medium">{{ pedido.correo }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Dirección</span>
+              <span class="font-medium text-right">{{ pedido.direccion }}</span>
+            </div>
+            <div class="border-t pt-2 flex justify-between items-center">
+              <span class="font-semibold">Total</span>
+              <span class="font-bold text-xl">${{ pedido.total }}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="font-semibold text-lg">Siguientes pasos</h2>
+          <div class="bg-gray-50 border rounded-lg p-4 text-sm text-gray-700 space-y-2">
+            <p>1. Revisa el estado de tu pedido en <a href="{% url 'mis_pedidos' %}" class="text-teal-700 font-semibold hover:underline">Mis pedidos</a>.</p>
+            <p>2. Si necesitas corregir datos de envío, edita tu perfil.</p>
+            <p>3. Te contactaremos si requerimos más información.</p>
+          </div>
+        </section>
+      </div>
+
+      <div class="mt-8 flex flex-col sm:flex-row gap-3">
+        <a href="{% url 'mis_pedidos' %}"
+           class="inline-flex justify-center px-5 py-3 bg-gray-900 text-white rounded-lg font-semibold text-sm hover:bg-gray-800">
+          Ver mis pedidos
+        </a>
+        <a href="{% url 'catalogo' %}"
+           class="inline-flex justify-center px-5 py-3 bg-gray-100 text-gray-800 rounded-lg font-semibold text-sm hover:bg-gray-200">
+          Volver al catálogo
+        </a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

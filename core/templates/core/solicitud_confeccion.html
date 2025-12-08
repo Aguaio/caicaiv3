@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Confección a medida — Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .success { background-color: #dcfce7; color: #166534; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+    .error { background-color: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <button
+          onclick="window.location.href='{% url 'catalogo' %}'"
+          class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">←</span>
+          <span class="font-medium">Volver al catálogo</span>
+        </button>
+
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>
+              Sesión: <strong>{{ user.username }}</strong>
+            </p>
+            <p class="mt-1">
+              <a href="{% url 'mis_pedidos' %}" class="hover:text-gray-700">Mis pedidos</a> ·
+              <a href="{% url 'editar_perfil' %}" class="hover:text-gray-700">Perfil</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% else %}
+            <p>
+              <a href="{% url 'login_unificado' %}" class="hover:text-gray-700 font-semibold">Iniciar sesión</a> ·
+              <a href="{% url 'registro_cliente' %}" class="hover:text-gray-700">Registrarse</a>
+            </p>
+          {% endif %}
+          <p class="mt-2 flex justify-end items-center gap-1 text-xs">
+            <span class="font-medium">Carrito:</span>
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold">
+              {{ cart_count|default:0 }}
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="py-12">
+    <div class="max-w-4xl mx-auto px-4">
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 rounded-full bg-teal-600 flex items-center justify-center mx-auto mb-4">
+          <span class="text-white text-2xl">✂</span>
+        </div>
+        <h1 class="text-3xl font-bold mb-3">Servicio de Confección a Medida</h1>
+        <p class="text-gray-600 max-w-2xl mx-auto text-sm sm:text-base">
+          Completa este formulario para solicitar una prenda personalizada. Nuestro equipo revisará tu solicitud
+          y se pondrá en contacto contigo para coordinar detalles, tiempos y valores.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-xl p-6 sm:p-8">
+
+        <!-- Errores generales del formulario -->
+        {% if form.non_field_errors %}
+          <div class="mb-4">
+            {% for error in form.non_field_errors %}
+              <p class="error">{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" class="space-y-4">
+          {% csrf_token %}
+
+          <!-- NOMBRE -->
+          <div>
+            <label class="block text-sm font-medium mb-2">Nombre Completo *</label>
+            <input
+              type="text"
+              name="nombre"
+              value="{{ form.nombre.value|default_if_none:'' }}"
+              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="Tu nombre completo">
+            {% for error in form.nombre.errors %}
+              <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+
+          <!-- CORREO + TELÉFONO -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Correo Electrónico *</label>
+              <input
+                type="email"
+                name="correo"
+                value="{{ form.correo.value|default_if_none:'' }}"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                placeholder="tu_correo@ejemplo.cl">
+              {% for error in form.correo.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Teléfono *</label>
+              <input
+                type="text"
+                name="telefono"
+                value="{{ form.telefono.value|default_if_none:'' }}"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                placeholder="+56 9 XXXX XXXX">
+              {% for error in form.telefono.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- TIPO DE PRENDA -->
+        <div>
+            <label class="block text-sm font-medium mb-2">Tipo de Prenda *</label>
+            <select
+                name="tipo_prenda"
+                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <option value="">Seleccionar...</option>
+                <option value="poleron"  {% if form.tipo_prenda.value == 'poleron' %}selected{% endif %}>Polerón</option>
+                <option value="polera"   {% if form.tipo_prenda.value == 'polera' %}selected{% endif %}>Polera</option>
+                <option value="pantalon" {% if form.tipo_prenda.value == 'pantalon' %}selected{% endif %}>Pantalón</option>
+                <option value="otro"     {% if form.tipo_prenda.value == 'otro' %}selected{% endif %}>Otro</option>
+            </select>
+            {% for error in form.tipo_prenda.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+          <!-- DESCRIPCIÓN -->
+          <div>
+            <label class="block text-sm font-medium mb-2">Descripción del Diseño *</label>
+            <textarea
+              name="descripcion_diseno"
+              rows="4"
+              class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="Describe tu diseño, materiales preferidos, colores, medidas, etc.">{{ form.descripcion_diseno.value|default_if_none:'' }}</textarea>
+            {% for error in form.descripcion_diseno.errors %}
+              <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+
+          <!-- BOTONES -->
+          <div class="flex flex-col sm:flex-row gap-3 mt-4">
+            <button
+              type="submit"
+              class="flex-1 bg-teal-600 text-white py-3 rounded-lg font-bold hover:bg-teal-700 transition-colors">
+              ENVIAR SOLICITUD
+            </button>
+            <button
+              type="button"
+              onclick="window.location.href='{% url 'catalogo' %}'"
+              class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-300 transition-colors">
+              CANCELAR
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white border-t py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      <p>© 2025 Caicai® — Todos los derechos reservados.</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Categorías — Panel Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <button onclick="window.location.href='{% url 'home' %}'"
+                class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">⌂</span>
+          <span class="font-medium">Ver tienda</span>
+        </button>
+
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>Sesión: <strong>{{ user.username }}</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-700 font-semibold">Panel</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% elif request.session.admin_id %}
+            <p>Sesión: <strong>Admin</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
+        <div>
+          <p class="uppercase tracking-wide font-semibold text-gray-600">Administrar categorías</p>
+          <p>Organiza los productos del catálogo por tipo.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="py-8">
+    <div class="max-w-7xl mx-auto px-4">
+      <nav class="flex flex-wrap gap-3 text-xs sm:text-sm text-gray-600 mb-6">
+        <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
+        <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
+        <span class="font-semibold text-gray-900">Categorías</span>
+        <a href="{% url 'pedidos_list' %}" class="hover:text-gray-900">Pedidos</a>
+        <a href="{% url 'clientes_list' %}" class="hover:text-gray-900">Clientes</a>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
+        <a href="{% url 'solicitudes_confeccion_list' %}" class="hover:text-gray-900">Confección</a>
+      </nav>
+
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <div class="px-4 py-2 rounded-lg text-sm
+                        {% if message.tags == 'success' %}
+                          bg-emerald-50 text-emerald-700
+                        {% else %}
+                          bg-red-50 text-red-700
+                        {% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-xl sm:text-2xl font-bold">Categorías</h1>
+        <a href="{% url 'categoria_create' %}"
+           class="inline-flex items-center px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800">
+          + Nueva categoría
+        </a>
+      </div>
+
+      {% if categorias %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 border-b">
+              <tr class="text-left text-gray-600">
+                <th class="px-4 py-3">ID</th>
+                <th class="px-4 py-3">Nombre</th>
+                <th class="px-4 py-3 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in categorias %}
+                <tr class="border-b last:border-0 hover:bg-gray-50">
+                  <td class="px-4 py-3 text-xs text-gray-500">{{ c.id }}</td>
+                  <td class="px-4 py-3 font-medium text-gray-900">{{ c.nombre }}</td>
+                  <td class="px-4 py-3">
+                    <div class="flex justify-end gap-2">
+                      <a href="{% url 'categoria_edit' c.id %}"
+                         class="px-3 py-1 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-gray-800">
+                        Editar
+                      </a>
+                      <form action="{% url 'categoria_delete' c.id %}"
+                            method="post"
+                            class="inline-flex"
+                            onsubmit="return confirm('¿Seguro que deseas eliminar esta categoría?');">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="px-3 py-1 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">
+                          Eliminar
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-gray-500 text-sm mt-4">
+          No hay categorías creadas todavía.
+        </p>
+      {% endif %}
+    </div>
+  </main>
+</body>
+</html>

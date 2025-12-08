@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirmar pedido — Caicai</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    .success { background-color: #dcfce7; color: #166534; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+    .error { background-color: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slideIn { animation: slideIn 0.2s ease-out; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between gap-4 mb-4">
+        <button
+          onclick="window.location.href='{% url 'ver_carrito' %}'"
+          class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">←</span>
+          <span class="font-medium">Volver al carrito</span>
+        </button>
+
+        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gray-800 rounded flex items-center justify-center">
+          <span class="text-white font-bold text-lg sm:text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>
+              Sesión: <strong>{{ user.username }}</strong>
+              {% if user.bloqueado %}
+                <span class="text-red-600 font-semibold">(bloqueado)</span>
+              {% endif %}
+            </p>
+            <p class="mt-1">
+              <a href="{% url 'mis_pedidos' %}" class="hover:text-gray-700">Mis pedidos</a> ·
+              <a href="{% url 'editar_perfil' %}" class="hover:text-gray-700">Perfil</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% else %}
+            <p>
+              <a href="{% url 'login_unificado' %}" class="hover:text-gray-700 font-semibold">Iniciar sesión</a> ·
+              <a href="{% url 'registro_cliente' %}" class="hover:text-gray-700">Registrarse</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Pasos del checkout -->
+      <div class="bg-gray-50 border rounded-lg px-4 py-3 text-xs sm:text-sm text-gray-600 flex flex-wrap gap-1 sm:gap-3 justify-center">
+        <span>CARRO</span>
+        <span>›</span>
+        <span class="font-semibold text-gray-900">PROCESO DE PAGO</span>
+        <span>›</span>
+        <span>REVISIÓN DEL PEDIDO</span>
+        <span>›</span>
+        <span>ÉXITO</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <!-- mensajes -->
+    {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+          <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %} animate-slideIn">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if user.is_authenticated and user.bloqueado %}
+      <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
+        Tu cuenta está bloqueada. No puedes confirmar pedidos.
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Columna izquierda: resumen (si el backend manda productos/total, se muestran; si no, no pasa nada) -->
+      <section class="lg:col-span-2">
+        <h1 class="text-2xl sm:text-3xl font-bold mb-4">Revisión del pedido</h1>
+
+        <p class="text-sm text-gray-600 mb-4">
+          A continuación se revierte la información asociada a tu pedido. Al confirmar, se generará el pedido usando los
+          productos que tienes actualmente en el carrito.
+        </p>
+
+        {% if productos %}
+          <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+            <div class="grid grid-cols-12 gap-4 px-4 sm:px-6 py-3 border-b bg-gray-50 text-[11px] sm:text-xs font-semibold text-gray-600">
+              <div class="col-span-6 sm:col-span-6">PRODUCTO</div>
+              <div class="hidden sm:block sm:col-span-2 text-center">CANTIDAD</div>
+              <div class="hidden sm:block sm:col-span-2 text-center">PRECIO UNITARIO</div>
+              <div class="hidden sm:block sm:col-span-2 text-center">SUBTOTAL</div>
+            </div>
+
+            {% for p in productos %}
+              <div class="grid grid-cols-12 gap-4 px-4 sm:px-6 py-4 border-b last:border-0 items-center bg-white text-xs sm:text-sm">
+                <div class="col-span-12 sm:col-span-6 flex items-center gap-3 sm:gap-4">
+                  <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-200 to-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {% if p.imagen %}
+                      <img src="{{ p.imagen }}" alt="{{ p.nombre }}" class="w-full h-full object-cover">
+                    {% else %}
+                      <span class="text-[10px] sm:text-xs font-bold text-gray-400">
+                        FOTO {{ p.id }}
+                      </span>
+                    {% endif %}
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-sm mb-1">{{ p.nombre }}</h3>
+                    <p class="text-gray-500 text-[11px] sm:hidden">
+                      Cantidad: {{ p.cantidad }} · ${{ p.precio }}
+                    </p>
+                  </div>
+                </div>
+                <div class="hidden sm:flex sm:col-span-2 justify-center">
+                  <span class="px-3 py-1 border rounded text-sm bg-gray-50">
+                    {{ p.cantidad }}
+                  </span>
+                </div>
+                <div class="hidden sm:flex sm:col-span-2 justify-center font-medium">
+                  ${{ p.precio }}
+                </div>
+                <div class="hidden sm:flex sm:col-span-2 justify-center font-bold">
+                  ${{ p.subtotal }}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if total %}
+          <div class="bg-white rounded-lg shadow p-5 sm:p-6 mb-6">
+            <h2 class="font-bold text-base sm:text-lg mb-3">Resumen de montos</h2>
+            <div class="space-y-2 text-xs sm:text-sm mb-2">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Subtotal</span>
+                <span class="font-medium">${{ total }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Envío</span>
+                <span class="font-medium">Por calcular</span>
+              </div>
+              <div class="border-t pt-3 mt-2">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-sm sm:text-base">TOTAL</span>
+                  <span class="font-bold text-lg sm:text-xl">${{ total }}</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-[11px] sm:text-xs text-gray-500">
+              El cálculo final de envío se coordina con la pyme según dirección de entrega.
+            </p>
+          </div>
+        {% endif %}
+      </section>
+
+      <!-- Columna derecha: datos de cliente + botón confirmar -->
+      <aside class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow p-5 sm:p-6 mb-6">
+          <h2 class="font-bold text-base sm:text-lg mb-4">Datos del cliente</h2>
+
+          {% if user.is_authenticated %}
+            <div class="space-y-3 text-xs sm:text-sm">
+              <div>
+                <p class="text-gray-500 text-[11px] uppercase tracking-wide mb-1">Nombre</p>
+                <p class="font-medium">{{ user.first_name }} {{ user.last_name }}</p>
+              </div>
+              <div>
+                <p class="text-gray-500 text-[11px] uppercase tracking-wide mb-1">Correo</p>
+                <p class="font-medium">{{ user.email }}</p>
+              </div>
+              <div>
+                <p class="text-gray-500 text-[11px] uppercase tracking-wide mb-1">Dirección</p>
+                <p class="font-medium">
+                  {{ user.direccion|default:"No registrada" }}
+                </p>
+              </div>
+              <div>
+                <p class="text-gray-500 text-[11px] uppercase tracking-wide mb-1">Teléfono</p>
+                <p class="font-medium">
+                  {{ user.telefono|default:"No registrado" }}
+                </p>
+              </div>
+
+              <p class="text-[11px] sm:text-xs text-gray-500 mt-3">
+                Si alguno de tus datos es incorrecto, puedes actualizarlo en la sección
+                <a href="{% url 'editar_perfil' %}" class="underline hover:text-gray-700">“Mi perfil”</a>.
+              </p>
+            </div>
+          {% else %}
+            <p class="text-sm text-gray-600 mb-3">
+              Debes iniciar sesión para confirmar el pedido.
+            </p>
+            <a
+              href="{% url 'login_unificado' %}"
+              class="inline-flex justify-center w-full bg-teal-500 text-white py-3 rounded font-bold text-xs sm:text-sm hover:bg-teal-600 transition-colors">
+              Iniciar sesión
+            </a>
+          {% endif %}
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-5 sm:p-6">
+          <h2 class="font-bold text-base sm:text-lg mb-4">Confirmación</h2>
+
+          <p class="text-xs sm:text-sm text-gray-600 mb-4">
+            Al confirmar, se generará tu pedido en el sistema con estado <strong>“pendiente”</strong>,
+            asociado a tu cuenta. Luego la pyme podrá cambiarlo a <em>en proceso</em>, <em>finalizado</em>
+            o <em>rechazado</em>.
+          </p>
+
+          {% if not user.is_authenticated %}
+            <a
+              href="{% url 'login_unificado' %}"
+              class="w-full inline-flex justify-center bg-teal-500 text-white py-3 rounded font-bold text-xs sm:text-sm hover:bg-teal-600 transition-colors mb-2">
+              Inicia sesión para confirmar
+            </a>
+          {% elif user.bloqueado %}
+            <button
+              type="button"
+              disabled
+              class="w-full bg-gray-300 text-gray-600 py-3 rounded font-bold text-xs sm:text-sm cursor-not-allowed mb-2">
+              Cuenta bloqueada: no puedes confirmar pedidos
+            </button>
+          {% else %}
+            <form method="post" action="{% url 'confirmar_pedido' %}">
+              {% csrf_token %}
+              <!-- Si en el futuro quieres pedir algo extra (comentario, referencia, etc.), va aquí -->
+
+              <button
+                type="submit"
+                class="w-full bg-teal-500 text-white py-3 rounded font-bold text-xs sm:text-sm hover:bg-teal-600 transition-colors mb-2">
+                CONFIRMAR PEDIDO
+              </button>
+            </form>
+          {% endif %}
+
+          <div class="text-center mt-2">
+            <a
+              href="{% url 'ver_carrito' %}"
+              class="text-xs sm:text-sm text-gray-600 hover:text-gray-900 underline">
+              ← Volver al carrito
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="bg-white border-t py-6 mt-6">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      <p>© 2025 Caicai® — Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- Desvanecer mensajes -->
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('.success, .error').forEach(el => {
+        el.style.transition = 'opacity 0.5s';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 500);
+      });
+    }, 5000);
+  </script>
+</body>
+</html>

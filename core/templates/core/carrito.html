@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Carrito — Caicai</title>
+
+  <!-- Tailwind por CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    .success { background-color: #dcfce7; color: #166534; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+    .error { background-color: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slideIn { animation: slideIn 0.2s ease-out; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <!-- Fila superior: volver / logo / carrito -->
+      <div class="flex items-center justify-between gap-4 mb-4">
+        <button
+          onclick="window.location.href='{% url 'catalogo' %}'"
+          class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">←</span>
+          <span class="font-medium">Volver a la tienda</span>
+        </button>
+
+        <div class="w-20 h-20 sm:w-24 sm:h-24 bg-gray-800 rounded flex items-center justify-center">
+          <span class="text-white font-bold text-lg sm:text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>
+              Sesión: <strong>{{ user.username }}</strong>
+              {% if user.bloqueado %}
+                <span class="text-red-600 font-semibold">(bloqueado)</span>
+              {% endif %}
+            </p>
+            <p class="mt-1">
+              <a href="{% url 'mis_pedidos' %}" class="hover:text-gray-700">Mis pedidos</a> ·
+              <a href="{% url 'editar_perfil' %}" class="hover:text-gray-700">Perfil</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% else %}
+            <p>
+              <a href="{% url 'login_unificado' %}" class="hover:text-gray-700 font-semibold">Iniciar sesión</a> ·
+              <a href="{% url 'registro_cliente' %}" class="hover:text-gray-700">Registrarse</a>
+            </p>
+          {% endif %}
+          <p class="mt-2 flex justify-end items-center gap-1 text-xs">
+            <span class="font-medium">Carrito:</span>
+            <span id="carrito-count"
+                  class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold">
+              {{ cart_count|default:0 }}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Barra de pasos (solo visual) -->
+      <div class="bg-gray-50 border rounded-lg px-4 py-3 text-xs sm:text-sm text-gray-600 flex flex-wrap gap-1 sm:gap-3 justify-center">
+        <span class="font-semibold text-gray-900">CARRO</span>
+        <span>›</span>
+        <span>PROCESO DE PAGO</span>
+        <span>›</span>
+        <span>REVISIÓN DEL PEDIDO</span>
+        <span>›</span>
+        <span>ÉXITO</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Mensajes Django -->
+    {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+          <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %} animate-slideIn">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if faltantes %}
+      <div class="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+        <p class="font-semibold mb-1">No hay stock suficiente para:</p>
+        <ul class="list-disc list-inside text-sm">
+          {% for f in faltantes %}
+            <li>{{ f.nombre }} (disponible: {{ f.disponible }}, solicitado: {{ f.cantidad }})</li>
+          {% endfor %}
+        </ul>
+        <p class="mt-2 text-xs text-red-700">Ajusta cantidades o elimina productos para continuar.</p>
+      </div>
+    {% endif %}
+
+    {% if user.is_authenticated and user.bloqueado %}
+      <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
+        Tu cuenta está bloqueada. Solo puedes ver el catálogo, no podrás confirmar pedidos.
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- COLUMNA IZQUIERDA: listado de productos -->
+      <section class="lg:col-span-2">
+        <h1 class="text-2xl sm:text-3xl font-bold mb-4">Carro de compras</h1>
+
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+          <!-- Encabezado tabla -->
+          <div class="grid grid-cols-12 gap-4 px-4 sm:px-6 py-3 border-b bg-gray-50 text-[11px] sm:text-xs font-semibold text-gray-600">
+            <div class="col-span-6 sm:col-span-5">PRODUCTO</div>
+            <div class="hidden sm:block sm:col-span-2 text-center">CANTIDAD</div>
+            <div class="hidden sm:block sm:col-span-2 text-center">PRECIO UNITARIO</div>
+            <div class="hidden sm:block sm:col-span-2 text-center">SUBTOTAL</div>
+            <div class="col-span-2 sm:col-span-1 text-center"></div>
+          </div>
+
+          {% if productos %}
+            {% for p in productos %}
+              <div class="grid grid-cols-12 gap-4 px-4 sm:px-6 py-4 border-b last:border-0 items-center bg-white hover:bg-gray-50 transition-colors text-xs sm:text-sm">
+                <!-- Producto + imagen -->
+                <div class="col-span-12 sm:col-span-5 flex items-center gap-3 sm:gap-4">
+                  <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-gray-200 to-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {% if p.imagen %}
+                      <img src="{{ p.imagen }}" alt="{{ p.nombre }}" class="w-full h-full object-cover">
+                    {% else %}
+                      <span class="text-[10px] sm:text-xs font-bold text-gray-400">
+                        FOTO {{ p.id }}
+                      </span>
+                    {% endif %}
+                  </div>
+                  <div>
+                    <h3 class="font-semibold text-sm mb-1">{{ p.nombre }}</h3>
+                    <p class="text-gray-500 text-[11px] sm:hidden">
+                      Cantidad: {{ p.cantidad }} · ${{ p.precio }}
+                    </p>
+                    {% if not p.stock_ok %}
+                      <p class="text-xs text-red-600 mt-1">Sin stock (disp: {{ p.stock }})</p>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <!-- Cantidad -->
+                <div class="hidden sm:flex sm:col-span-2 justify-center">
+                  <span class="px-3 py-1 border rounded text-sm bg-gray-50">
+                    {{ p.cantidad }}
+                  </span>
+                </div>
+
+                <!-- Precio unitario -->
+                <div class="hidden sm:flex sm:col-span-2 justify-center font-medium">
+                  ${{ p.precio }}
+                </div>
+
+                <!-- Subtotal -->
+                <div class="hidden sm:flex sm:col-span-2 justify-center font-bold">
+                  ${{ p.subtotal }}
+                </div>
+
+                <!-- Eliminar -->
+                <div class="col-span-12 sm:col-span-1 flex justify-end">
+                  <form action="{% url 'eliminar_del_carrito' p.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="inline-flex items-center gap-1 text-red-500 hover:text-red-700 text-xs font-semibold">
+                      ✕ <span class="hidden sm:inline">Eliminar</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="px-4 sm:px-6 py-10 text-center text-gray-500 text-sm">
+              <p class="mb-4">Tu carrito está vacío.</p>
+              <a
+                href="{% url 'catalogo' %}"
+                class="inline-flex items-center gap-1 text-teal-600 hover:text-teal-700 font-medium text-sm">
+                <span>←</span>
+                <span>Ir al catálogo</span>
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- COLUMNA DERECHA: resumen y acciones -->
+      <aside class="lg:col-span-1 space-y-6">
+        <!-- Resumen del pedido -->
+        <div class="bg-white rounded-lg shadow p-5 sm:p-6">
+          <h2 class="font-bold text-base sm:text-lg mb-4">Resumen del pedido</h2>
+
+          <div class="space-y-2 text-xs sm:text-sm mb-4">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Subtotal</span>
+              <span class="font-medium">${{ total }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">Envío</span>
+              <span class="font-medium">Por calcular</span>
+            </div>
+            <div class="border-t pt-3 mt-2">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-sm sm:text-base">TOTAL</span>
+                <span class="font-bold text-lg sm:text-xl">${{ total }}</span>
+              </div>
+            </div>
+          </div>
+
+          {% if not productos %}
+            <button
+              type="button"
+              disabled
+              class="w-full bg-gray-300 text-gray-600 py-3 rounded font-bold text-xs sm:text-sm cursor-not-allowed">
+              No hay productos en el carrito
+            </button>
+          {% elif faltantes %}
+            <button
+              type="button"
+              disabled
+              class="w-full bg-gray-300 text-gray-600 py-3 rounded font-bold text-xs sm:text-sm cursor-not-allowed">
+              Ajusta stock para continuar
+            </button>
+          {% elif user.is_authenticated and user.bloqueado %}
+            <button
+              type="button"
+              disabled
+              class="w-full bg-gray-300 text-gray-600 py-3 rounded font-bold text-xs sm:text-sm cursor-not-allowed">
+              Cuenta bloqueada: no puedes confirmar pedidos
+            </button>
+          {% elif not user.is_authenticated %}
+            <a
+              href="{% url 'login_unificado' %}"
+              class="w-full inline-flex justify-center bg-teal-500 text-white py-3 rounded font-bold text-xs sm:text-sm hover:bg-teal-600 transition-colors">
+              Inicia sesión para continuar
+            </a>
+          {% else %}
+            <!-- Ir a la pantalla de confirmar_pedido (proceso de pago simulado) -->
+            <a
+              href="{% url 'confirmar_pedido' %}"
+              class="w-full inline-flex justify-center bg-teal-500 text-white py-3 rounded font-bold text-xs sm:text-sm hover:bg-teal-600 transition-colors mb-2">
+              PROCEDER AL PAGO
+            </a>
+          {% endif %}
+
+          <div class="text-center mt-2">
+            <a
+              href="{% url 'catalogo' %}"
+              class="text-xs sm:text-sm text-gray-600 hover:text-gray-900 underline">
+              — Seguir comprando
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- FOOTER simple -->
+  <footer class="bg-white border-t py-6 mt-6">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      <p>© 2025 Caicai® — Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- Desvanecer mensajes -->
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('.success, .error').forEach(el => {
+        el.style.transition = 'opacity 0.5s';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 500);
+      });
+    }, 5000);
+  </script>
+</body>
+</html>

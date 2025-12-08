@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Iniciar sesión — Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .success { background-color: #dcfce7; color: #166534; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+    .error { background-color: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <button
+        onclick="window.location.href='{{ '/' }}'"
+        class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+        <span class="text-lg">←</span>
+        <span class="font-medium">Volver a la tienda</span>
+      </button>
+
+      <div class="w-20 h-20 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+        <span class="text-white font-bold text-lg">CAICAI</span>
+      </div>
+
+      <div class="text-right text-xs sm:text-sm text-gray-500">
+        ¿No tienes cuenta?<br>
+        <a href="{% url 'registro_cliente' %}" class="text-teal-700 font-semibold hover:underline">
+          Registrarse
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="py-12">
+    <div class="max-w-md mx-auto px-4">
+
+      <!-- Mensajes -->
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <div class="{% if message.tags == 'error' %}error{% else %}success{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="bg-white rounded-xl shadow-xl p-6 sm:p-8">
+        <h1 class="text-2xl sm:text-3xl font-bold mb-2 text-center">Iniciar sesión</h1>
+        <p class="text-sm text-gray-600 mb-6 text-center">
+          Usa tu cuenta de cliente o de administrador Caicai.
+        </p>
+
+        <form method="post" action="{% url 'login_unificado' %}" class="space-y-4">
+          {% csrf_token %}
+
+          <div>
+            <label class="block text-sm font-medium mb-2">Usuario</label>
+            <input
+              type="text"
+              name="username"
+              value="{{ request.POST.username|default:'' }}"
+              autocomplete="username"
+              class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              required>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium mb-2">Contraseña</label>
+            <input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+              required>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full mt-4 bg-gray-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors">
+            Ingresar
+          </button>
+        </form>
+
+        <p class="mt-4 text-xs text-gray-500 text-center">
+          Si eres administrador, ingresa tus credenciales de <strong>AdminUser</strong>.  
+          Si eres cliente, usa tu usuario y contraseña de la tienda.
+        </p>
+        <p class="mt-2 text-xs text-center">
+          <a href="{% url 'forgot_password_username' %}" class="text-teal-700 hover:underline font-semibold">Olvidé mi contraseña</a>
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white border-t py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      <p>© 2025 Caicai® — Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- Desvanecer mensajes -->
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('.success, .error').forEach(el => {
+        el.style.transition = 'opacity 0.5s';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 500);
+      });
+    }, 5000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Clientes Bloqueados</title>
+  <style>
+    table { border: 1px solid black; border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid black; padding: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Clientes Bloqueados</h1>
+  <table>
+    <tr><th>Usuario</th><th>Correo</th><th>Fecha de bloqueo</th><th>Acción</th></tr>
+    {% for c in clientes %}
+      {% if c.bloqueado %}
+      <tr>
+        <td>{{ c.username }}</td>
+        <td>{{ c.email }}</td>
+        <td>
+          {% for h in historial %}
+            {% if h.nombre == c.username and h.accion == 'bloqueado' %}
+              {{ h.fecha|date:"d/m/Y H:i" }}
+            {% endif %}
+          {% endfor %}
+        </td>
+        <form action="{% url 'cliente_desbloquear' c.id %}" method="post" style="display:inline">
+          {% csrf_token %}
+          <button type="submit">Desbloquear</button>
+        </form>
+      </tr>
+      {% endif %}
+    {% empty %}
+    <tr><td colspan="4">No hay clientes bloqueados.</td></tr>
+    {% endfor %}
+  </table>
+
+  <br>
+  <a href="{% url 'clientes_list' %}">Volver</a>
+</body>
+</html>

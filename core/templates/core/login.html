@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Iniciar Sesión</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    label { display: block; margin-top: 10px; }
+    input { width: 250px; padding: 5px; }
+    .error { color: red; font-size: 0.9em; margin-top: 4px; }
+    .success {
+      display: flex;
+      align-items: center;
+      color: green;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .success::before {
+      content: '✓';
+      color: white;
+      background-color: green;
+      border-radius: 50%;
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      text-align: center;
+      line-height: 18px;
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Iniciar Sesión</h1>
+
+  {% if messages %}
+    {% for message in messages %}
+      {% if message.tags == 'success' %}
+        <div class="success">{{ message }}</div>
+      {% else %}
+        <div class="error">{{ message }}</div>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <label>Usuario:</label>
+    <input type="text" name="username" required>
+
+    <label>Contraseña:</label>
+    <input type="password" name="password" required>
+
+    <br><br>
+    <button type="submit">Entrar</button>
+  </form>
+
+  <br>
+  <a href="{% url 'registro_cliente' %}">¿No tienes cuenta? Regístrate</a><br>
+  <br>
+  <a href="{% url 'solicitar_codigo_password' %}">¿Olvidaste tu contraseña?</a><br>
+  <br>
+  <a href="/">Volver al inicio</a>
+
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('.success, .error').forEach(el => {
+        el.style.transition = 'opacity 0.5s';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 500);
+      });
+    }, 5000);
+  </script>
+  
+</body>
+</html>

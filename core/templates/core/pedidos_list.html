@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pedidos — Panel Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <button onclick="window.location.href='{% url 'home' %}'"
+                class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">⌂</span>
+          <span class="font-medium">Ver tienda</span>
+        </button>
+
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>Sesión: <strong>{{ user.username }}</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% elif request.session.admin_id %}
+            <p>Sesión: <strong>Admin</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
+        <div>
+          <p class="uppercase tracking-wide font-semibold text-gray-600">Gestionar pedidos</p>
+          <p>Revisa los pedidos de la tienda y cambia su estado.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="py-8">
+    <div class="max-w-7xl mx-auto px-4">
+      <nav class="flex flex-wrap gap-3 text-xs sm:text-sm text-gray-600 mb-6">
+        <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
+        <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
+        <a href="{% url 'categorias_list' %}" class="hover:text-gray-900">Categorías</a>
+        <span class="font-semibold text-gray-900">Pedidos</span>
+        <a href="{% url 'clientes_list' %}" class="hover:text-gray-900">Clientes</a>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
+        <a href="{% url 'solicitudes_confeccion_list' %}" class="hover:text-gray-900">Confección</a>
+      </nav>
+
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold">Pedidos</h1>
+          <p class="text-sm text-gray-600">
+            Revisa los pedidos realizados en la tienda y accede al detalle para cambiar su estado.
+          </p>
+        </div>
+        <form method="get" action="{% url 'pedidos_list' %}" class="flex items-center gap-2 text-sm">
+          <input
+            type="number"
+            name="pedido_id"
+            value="{{ pedido_id|default:'' }}"
+            min="1"
+            placeholder="ID de pedido"
+            class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 w-32">
+          <button
+            type="submit"
+            class="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+            Buscar
+          </button>
+          {% if pedido_id %}
+            <a href="{% url 'pedidos_list' %}" class="text-xs text-gray-500 hover:text-gray-700 underline">Limpiar</a>
+          {% endif %}
+        </form>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+              <tr>
+                <th class="px-4 py-3 text-left">#</th>
+                <th class="px-4 py-3 text-left">Cliente</th>
+                <th class="px-4 py-3 text-left">Correo</th>
+                <th class="px-4 py-3 text-left">Fecha</th>
+                <th class="px-4 py-3 text-left">Estado</th>
+                <th class="px-4 py-3 text-right">Total</th>
+                <th class="px-4 py-3 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for p in pedidos %}
+                <tr class="{% if p.bloqueado %}bg-red-50{% endif %}">
+                  <td class="px-4 py-3 text-gray-700 font-medium">#{{ p.id }}</td>
+                  <td class="px-4 py-3">
+                    <div class="flex flex-col">
+                      <span class="font-medium text-gray-800">{{ p.nombre_cliente }}</span>
+                      {% if p.bloqueado %}
+                        <span class="text-[11px] text-red-600 font-semibold mt-1">
+                          Cuenta bloqueada
+                        </span>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-gray-600">{{ p.correo }}</td>
+                  <td class="px-4 py-3 text-gray-600">
+                    {{ p.fecha|date:"d/m/Y H:i" }}
+                  </td>
+                  <td class="px-4 py-3">
+                    {% if p.estado == 'pendiente' %}
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-yellow-50 text-yellow-700">
+                        Pendiente
+                      </span>
+                    {% elif p.estado == 'en_proceso' %}
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700">
+                        En proceso
+                      </span>
+                    {% elif p.estado == 'finalizado' %}
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-green-50 text-green-700">
+                        Finalizado
+                      </span>
+                    {% elif p.estado == 'rechazado' %}
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-700">
+                        Rechazado
+                      </span>
+                    {% else %}
+                      <span class="text-xs text-gray-600">{{ p.estado }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3 text-right font-semibold text-gray-800">
+                    ${{ p.total }}
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    <a href="{% url 'pedido_detalle' p.id %}"
+                       class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-gray-800">
+                      Ver detalle / Editar estado
+                    </a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="7" class="px-4 py-6 text-center text-gray-500 text-sm">
+                    No hay pedidos registrados.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Crear cuenta — Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .success { background-color: #dcfce7; color: #166534; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+    .error { background-color: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="border-b bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between text-sm">
+      <button
+        onclick="window.location.href='{{ '/' }}'"
+        class="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+        <span class="text-lg">←</span>
+        <span>Volver al inicio</span>
+      </button>
+
+      <div class="w-24 h-24 bg-gradient-to-b from-gray-900 to-gray-800 rounded-lg flex items-center justify-center shadow-lg">
+        <span class="text-white font-bold text-xl">CAICAI</span>
+      </div>
+
+      <div class="text-right text-xs sm:text-sm">
+        <span class="text-gray-500">¿Ya tienes cuenta?</span>
+        <a href="{% url 'login_unificado' %}" class="ml-1 text-gray-900 font-semibold hover:underline">
+          Inicia sesión
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="py-12">
+    <div class="max-w-xl mx-auto px-4">
+
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if form.non_field_errors %}
+        <div class="error mb-4">
+          {% for error in form.non_field_errors %}
+            <p class="text-sm">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
+        <h1 class="text-2xl sm:text-3xl font-bold mb-2 text-center">Crear cuenta</h1>
+        <p class="text-gray-600 text-sm sm:text-base text-center mb-6">
+          Regístrate para comprar en nuestra tienda online y seguir tus pedidos desde tu perfil.
+        </p>
+        <p class="text-[11px] text-center text-gray-400 mb-6">
+          Los campos marcados con <span class="text-red-500 font-bold">*</span> son obligatorios.
+        </p>
+
+        <form method="post" class="space-y-4">
+          {% csrf_token %}
+
+          <!-- Nombre de usuario -->
+          <div>
+            <label class="block text-sm font-medium mb-1">
+              Nombre de usuario <span class="text-red-500">*</span>
+            </label>
+            {{ form.username }}
+            {% for error in form.username.errors %}
+              <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+
+          <!-- Correo -->
+          <div>
+            <label class="block text-sm font-medium mb-1">
+              Correo electrónico <span class="text-red-500">*</span>
+            </label>
+            {{ form.email }}
+            {% for error in form.email.errors %}
+              <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+
+          <!-- Dirección y Teléfono -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">
+                Dirección
+              </label>
+              {{ form.direccion }}
+              {% for error in form.direccion.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">
+                Teléfono
+              </label>
+              {{ form.telefono }}
+              {% for error in form.telefono.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Passwords -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+            <div>
+              <label class="block text-sm font-medium mb-1">
+                Contraseña <span class="text-red-500">*</span>
+              </label>
+              {{ form.password1 }}
+              {% for error in form.password1.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">
+                Confirmar contraseña <span class="text-red-500">*</span>
+              </label>
+              {{ form.password2 }}
+              {% for error in form.password2.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ error }}</p>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Botones -->
+          <div class="flex flex-col sm:flex-row gap-3 mt-6">
+            <button
+              type="submit"
+              class="flex-1 bg-gray-900 text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+              Crear cuenta
+            </button>
+            <button
+              type="button"
+              onclick="window.location.href='{{ '/' }}'"
+              class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+              Cancelar
+            </button>
+          </div>
+
+          <p class="text-[11px] text-gray-400 mt-4 text-center">
+            Al registrarte aceptas nuestras condiciones de uso y políticas de privacidad.
+          </p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white border-t py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      <p>© 2025 Caicai® — Todos los derechos reservados.</p>
+    </div>
+  </footer>
+</body>
+</html>

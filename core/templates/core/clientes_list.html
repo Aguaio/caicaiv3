@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Clientes — Panel Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <button
+          onclick="window.location.href='{% url 'home' %}'"
+          class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">⌂</span>
+          <span class="font-medium">Ver tienda</span>
+        </button>
+
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>Sesión: <strong>{{ user.username }}</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% elif request.session.admin_id %}
+            <p>Sesión: <strong>Admin</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
+        <div>
+          <p class="uppercase tracking-wide font-semibold text-gray-600">Gestionar clientes</p>
+          <p>Administra cuentas, estado y bloqueo de clientes de la tienda.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="py-8">
+    <div class="max-w-7xl mx-auto px-4 space-y-6">
+      <!-- Nav interno panel -->
+      <nav class="flex flex-wrap gap-3 text-xs sm:text-sm text-gray-600 mb-6">
+        <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
+        <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
+        <a href="{% url 'categorias_list' %}" class="hover:text-gray-900">Categorías</a>
+        <a href="{% url 'pedidos_list' %}" class="hover:text-gray-900">Pedidos</a>
+        <span class="font-semibold text-gray-900">Clientes</span>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
+        <a href="{% url 'solicitudes_confeccion_list' %}" class="hover:text-gray-900">Confección</a>
+      </nav>
+
+      {% if messages %}
+        {% for m in messages %}
+          <div class="mb-2 px-4 py-2 rounded-lg text-sm
+                      {% if m.tags == 'success' %}bg-emerald-50 text-emerald-700
+                      {% elif m.tags == 'error' %}bg-red-50 text-red-700
+                      {% else %}bg-gray-100 text-gray-700{% endif %}">
+            {{ m }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold">Clientes</h1>
+          <p class="text-sm text-gray-600">
+            Gestiona las cuentas de los clientes: visualiza su estado y bloquea/desbloquea cuando sea necesario.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+              <tr>
+                <th class="px-4 py-3 text-left">Usuario</th>
+                <th class="px-4 py-3 text-left">Correo</th>
+                <th class="px-4 py-3 text-left">Tipo</th>
+                <th class="px-4 py-3 text-left">Estado</th>
+                <th class="px-4 py-3 text-left">Registrado</th>
+                <th class="px-4 py-3 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              {% for c in clientes %}
+                <tr>
+                  <td class="px-4 py-3">
+                    <div class="flex flex-col">
+                      <span class="font-medium text-gray-900">{{ c.username }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-gray-700">
+                    {{ c.email }}
+                  </td>
+                  <td class="px-4 py-3">
+                    {% if c.is_staff or c.is_superuser %}
+                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700">
+                        Administrador
+                      </span>
+                    {% else %}
+                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-50 text-gray-700">
+                        Cliente
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3">
+                    {% if c.bloqueado %}
+                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-700">
+                        Bloqueado
+                      </span>
+                    {% else %}
+                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">
+                        Activo
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3 text-gray-600">
+                    {% if c.date_joined %}
+                      {{ c.date_joined|date:"d/m/Y H:i" }}
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    {% if c.is_staff or c.is_superuser %}
+                      <span class="text-[11px] text-gray-400 italic">
+                        No editable (admin)
+                      </span>
+                    {% else %}
+                      {% if c.bloqueado %}
+                        <form action="{% url 'cliente_desbloquear' c.id %}" method="post" class="inline">
+                          {% csrf_token %}
+                          <button type="submit"
+                                  class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">
+                            Desbloquear
+                          </button>
+                        </form>
+                      {% else %}
+                        <form action="{% url 'cliente_bloquear' c.id %}" method="post" class="inline">
+                          {% csrf_token %}
+                          <button type="submit"
+                                  class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700">
+                            Bloquear
+                          </button>
+                        </form>
+                      {% endif %}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6" class="px-4 py-6 text-center text-gray-500 text-sm">
+                    No hay clientes registrados.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

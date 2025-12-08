@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Administración — Caicai</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    .success { background-color: #dcfce7; color: #166534; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; display:flex; align-items:center; gap:6px; }
+    .success::before { content: "✔"; font-weight:bold; }
+    .error { background-color: #fee2e2; color: #991b1b; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; }
+
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateY(-4px); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER CAICAI -->
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <!-- Volver a la tienda -->
+        <button
+          onclick="window.location.href='{% url 'home' %}'"
+          class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm"
+        >
+          <span class="text-lg">⌂</span>
+          <span class="font-medium">Ver tienda</span>
+        </button>
+
+        <!-- Logo -->
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <!-- Sesión / usuario -->
+        <div class="text-right text-xs sm:text-sm">
+          {% if user.is_authenticated %}
+            <p>
+              Sesión: <strong>{{ user.username }}</strong>
+            </p>
+            <p class="mt-1">
+              <a href="{% url 'editar_perfil' %}" class="hover:text-gray-700">Perfil</a> ·
+              <a href="{% url 'mis_pedidos' %}" class="hover:text-gray-700">Mis pedidos</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% elif request.session.admin_id %}
+            <p>
+              Sesión: <strong>Admin</strong>
+            </p>
+            <p class="mt-1">
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% else %}
+            <p>
+              <a href="{% url 'login_unificado' %}" class="hover:text-gray-700 font-semibold">Iniciar sesión</a> ·
+              <a href="{% url 'registro_cliente' %}" class="hover:text-gray-700">Registrarse</a>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Subtítulo -->
+      <div class="flex items-center justify-between text-xs sm:text-sm text-gray-500 mt-1">
+        <p class="uppercase tracking-wide font-semibold text-gray-600">
+          Panel de administración
+        </p>
+        <p>
+          Solo visible para administradores de Caicai.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="py-10">
+    <div class="max-w-7xl mx-auto px-4">
+
+      <!-- Mensajes Django -->
+      {% if messages %}
+        <div class="mb-4">
+          {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}success{% else %}error{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <!-- Título / descripción -->
+      <section class="mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+          Bienvenido al panel de Caicai
+        </h1>
+        <p class="text-sm sm:text-base text-gray-600 max-w-2xl">
+          Desde aquí puedes administrar las categorías, productos, pedidos, clientes y solicitudes
+          de confección a medida de la tienda. Los cambios que realices impactan directamente en lo que
+          ven los clientes en el catálogo.
+        </p>
+      </section>
+
+      <!-- GRID de accesos rápidos -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+
+        <!-- Productos -->
+        <a href="{% url 'productos_list' %}"
+           class="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div>
+            <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 text-white mb-4">
+              🛒
+            </div>
+            <h2 class="font-semibold text-lg mb-1">Productos</h2>
+            <p class="text-sm text-gray-600">
+              Ver, crear, editar y eliminar productos que se muestran en el catálogo de Caicai.
+            </p>
+          </div>
+          <span class="mt-4 text-sm font-semibold text-gray-900 group-hover:text-teal-600">
+            Ir a gestión de productos →
+          </span>
+        </a>
+
+        <!-- Categorías -->
+        <a href="{% url 'categorias_list' %}"
+           class="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div>
+            <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 text-white mb-4">
+              🗂
+            </div>
+            <h2 class="font-semibold text-lg mb-1">Categorías</h2>
+            <p class="text-sm text-gray-600">
+              Organiza los productos en categorías (poleras, polerones, pantalones, etc.) para el catálogo.
+            </p>
+          </div>
+          <span class="mt-4 text-sm font-semibold text-gray-900 group-hover:text-teal-600">
+            Administrar categorías →
+          </span>
+        </a>
+
+        <!-- Pedidos -->
+        <a href="{% url 'pedidos_list' %}"
+           class="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div>
+            <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 text-white mb-4">
+              📦
+            </div>
+            <h2 class="font-semibold text-lg mb-1">Pedidos</h2>
+            <p class="text-sm text-gray-600">
+              Revisar los pedidos realizados por los clientes, actualizar estados y ver detalles.
+            </p>
+          </div>
+          <span class="mt-4 text-sm font-semibold text-gray-900 group-hover:text-teal-600">
+            Ver pedidos →
+          </span>
+        </a>
+
+        <!-- Clientes -->
+        <a href="{% url 'clientes_list' %}"
+           class="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div>
+            <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 text-white mb-4">
+              👥
+            </div>
+            <h2 class="font-semibold text-lg mb-1">Clientes</h2>
+            <p class="text-sm text-gray-600">
+              Gestionar cuentas de clientes, revisar historial y bloquear/desbloquear usuarios.
+            </p>
+          </div>
+          <span class="mt-4 text-sm font-semibold text-gray-900 group-hover:text-teal-600">
+            Administrar clientes →
+          </span>
+        </a>
+
+        <!-- Solicitudes de confección -->
+        <a href="{% url 'solicitudes_confeccion_list' %}"
+           class="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div>
+            <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 text-white mb-4">
+              ✂️
+            </div>
+            <h2 class="font-semibold text-lg mb-1">Solicitudes de confección</h2>
+            <p class="text-sm text-gray-600">
+              Revisar y gestionar las solicitudes de prendas a medida enviadas por los clientes.
+            </p>
+          </div>
+          <span class="mt-4 text-sm font-semibold text-gray-900 group-hover:text-teal-600">
+            Ver solicitudes →
+          </span>
+        </a>
+
+        <!-- Historial de clientes -->
+        <a href="{% url 'historial_clientes' %}"
+           class="group bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md hover:-translate-y-0.5 transition-all">
+          <div>
+            <div class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 text-white mb-4">
+              🕑
+            </div>
+            <h2 class="font-semibold text-lg mb-1">Historial de clientes</h2>
+            <p class="text-sm text-gray-600">
+              Revisa acciones registradas por cliente: creación de cuenta, bloqueos, pedidos y más.
+            </p>
+          </div>
+          <span class="mt-4 text-sm font-semibold text-gray-900 group-hover:text-teal-600">
+            Ver historial →
+          </span>
+        </a>
+
+      </section>
+
+      <!-- Notita inferior -->
+      <section class="mt-6 text-xs sm:text-sm text-gray-500">
+        <p>
+          Tip: si cierras sesión o navegas como cliente, este panel deja de ser accesible para evitar que
+          un usuario normal vea funciones internas de Caicai.
+        </p>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="bg-white border-t py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      <p>© 2025 Caicai — Panel de administración.</p>
+    </div>
+  </footer>
+
+  <!-- Desvanecer mensajes -->
+  <script>
+    setTimeout(() => {
+      document.querySelectorAll('.success, .error').forEach(el => {
+        el.style.animation = 'fadeOut 0.5s forwards';
+        setTimeout(() => el.remove(), 500);
+      });
+    }, 5000);
+  </script>
+
+</body>
+</html>
