@@ -8,7 +8,7 @@ SECRET_KEY = 'django-insecure-(8f_x!sg%91c(2)!9-zr_s#b$_4#i0!_*coz)d0!gihd0*84d+
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 INSTALLED_APPS = [
@@ -106,3 +106,4 @@ AUTH_USER_MODEL = 'core.Cliente'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/catalogo/'
 LOGOUT_REDIRECT_URL = '/catalogo/'
+
