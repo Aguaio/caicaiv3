@@ -38,6 +38,7 @@
             </p>
             <p>
               <a href="{% url 'mis_pedidos' %}" class="hover:text-gray-900">Mis pedidos</a> ·
+              <a href="{% url 'mis_solicitudes_confeccion' %}" class="hover:text-gray-900">Mis confecciones</a> ·
               <a href="{% url 'logout_unificado' %}" class="hover:text-gray-900 font-semibold">Cerrar sesión</a>
             </p>
           {% else %}
@@ -123,8 +124,12 @@
                 name="telefono"
                 value="{{ user.telefono|default_if_none:'' }}"
                 class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm"
-                placeholder="+56 9 XXXXXXXX"
+                placeholder="+569XXXXXXXX"
+                pattern="\+569\d{8}"
+                title="Formato: +569XXXXXXXX"
+                inputmode="numeric"
               >
+              <p class="text-xs text-gray-500 mt-1">Usa el formato +569XXXXXXXX.</p>
             </div>
           </div>
 

@@ -106,6 +106,7 @@
                 Teléfono
               </label>
               {{ form.telefono }}
+              <p class="text-[11px] text-gray-500 mt-1">Formato: +569XXXXXXXX (solo números).</p>
               {% for error in form.telefono.errors %}
                 <p class="text-xs text-red-600 mt-1">{{ error }}</p>
               {% endfor %}
