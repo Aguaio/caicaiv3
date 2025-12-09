@@ -106,4 +106,3 @@ AUTH_USER_MODEL = 'core.Cliente'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/catalogo/'
 LOGOUT_REDIRECT_URL = '/catalogo/'
-
