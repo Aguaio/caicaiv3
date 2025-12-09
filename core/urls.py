@@ -12,6 +12,7 @@ urlpatterns = [
     path('carrito/eliminar/<int:id>/', views.eliminar_del_carrito, name='eliminar_del_carrito'),
     path('pedido/confirmar/', views.confirmar_pedido, name='confirmar_pedido'),
     path('mis-pedidos/', views.mis_pedidos, name='mis_pedidos'),
+    path('mis-solicitudes-confeccion/', views.mis_solicitudes_confeccion, name='mis_solicitudes_confeccion'),
     path('confeccion/', views.solicitud_confeccion, name='solicitud_confeccion'),
 
     # Registro y login unificados

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from .models import SolicitudConfeccion
+from .validators import validar_telefono_formato
 
 User = get_user_model()
 
@@ -55,7 +56,10 @@ class RegistroClienteForm(forms.ModelForm):
             ),
             "telefono": forms.TextInput(
                 attrs={
-                    "placeholder": "+56 9 XXXX XXXX",
+                    "placeholder": "+569XXXXXXXX",
+                    "pattern": r"\+569\d{8}",
+                    "title": "Formato: +569XXXXXXXX",
+                    "inputmode": "numeric",
                     "class": "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300",
                 }
             ),
@@ -83,6 +87,13 @@ class RegistroClienteForm(forms.ModelForm):
             raise forms.ValidationError("Las contraseñas no coinciden.")
         return cleaned_data
 
+    def clean_telefono(self):
+        telefono = self.cleaned_data.get("telefono", "")
+        try:
+            return validar_telefono_formato(telefono)
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc))
+
     def save(self, commit=True):
         user = super().save(commit=False)
         # Usamos password1 como contraseña final
@@ -105,9 +116,23 @@ class SolicitudConfeccionForm(forms.ModelForm):
         widgets = {
             "nombre": forms.TextInput(attrs={"placeholder": "Tu nombre completo"}),
             "correo": forms.EmailInput(attrs={"placeholder": "tucorreo@ejemplo.com"}),
-            "telefono": forms.TextInput(attrs={"placeholder": "+56 9 XXXX XXXX"}),
+            "telefono": forms.TextInput(
+                attrs={
+                    "placeholder": "+569XXXXXXXX",
+                    "pattern": r"\+569\d{8}",
+                    "title": "Formato: +569XXXXXXXX",
+                    "inputmode": "numeric",
+                }
+            ),
             "tipo_prenda": forms.Select(),
             "descripcion_diseno": forms.Textarea(
                 attrs={"rows": 4, "placeholder": "Describe tu diseño, materiales, colores, etc."}
             ),
         }
+
+    def clean_telefono(self):
+        telefono = self.cleaned_data.get("telefono", "")
+        try:
+            return validar_telefono_formato(telefono)
+        except ValueError as exc:
+            raise forms.ValidationError(str(exc))

@@ -9,6 +9,7 @@ from .models import AdminUser, Categoria, Producto, Pedido, DetallePedido, Clien
 from .decorators import admin_required
 from django.urls import reverse
 from .forms import SolicitudConfeccionForm, RegistroClienteForm
+from .validators import validar_telefono_formato
 
 
 from django.db import transaction
@@ -207,12 +208,17 @@ def editar_perfil(request):
         elif User.objects.exclude(id=user.id).filter(email=email).exists():
             messages.error(request, 'Ese correo ya está en uso.')
         else:
-            user.email = email
-            user.direccion = direccion
-            user.telefono = telefono
-            user.save()
-            messages.success(request, 'Perfil actualizado correctamente.')
-            return redirect('editar_perfil')
+            try:
+                telefono_normalizado = validar_telefono_formato(telefono)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            else:
+                user.email = email
+                user.direccion = direccion
+                user.telefono = telefono_normalizado
+                user.save()
+                messages.success(request, 'Perfil actualizado correctamente.')
+                return redirect('editar_perfil')
 
     return render(request, 'core/editar_perfil.html', {'user': user})
 
@@ -475,9 +481,12 @@ def pedidos_list(request):
     for p in pedidos:
         p.bloqueado = bool(block_by_user.get(p.nombre_cliente) or block_by_mail.get(p.correo))
 
+    confecciones = SolicitudConfeccion.objects.all().order_by('-fecha_creacion')
+
     return render(request, 'core/pedidos_list.html', {
         'pedidos': pedidos,
         'pedido_id': pedido_id,
+        'confecciones': confecciones,
     })
 
 @admin_required
@@ -742,7 +751,29 @@ def confirmar_pedido(request):
 @login_required
 def mis_pedidos(request):
     pedidos = Pedido.objects.filter(nombre_cliente=request.user.username).order_by('-fecha')
-    return render(request, 'core/mis_pedidos.html', {'pedidos': pedidos, 'cart_count': _cart_count(request)})
+    confecciones = SolicitudConfeccion.objects.filter(
+        Q(cliente=request.user) |
+        Q(cliente__isnull=True, correo=request.user.email)
+    ).order_by('-fecha_creacion')
+
+    return render(request, 'core/mis_pedidos.html', {
+        'pedidos': pedidos,
+        'confecciones': confecciones,
+        'cart_count': _cart_count(request)
+    })
+
+
+@login_required
+def mis_solicitudes_confeccion(request):
+    solicitudes = SolicitudConfeccion.objects.filter(
+        Q(cliente=request.user) |
+        Q(cliente__isnull=True, correo=request.user.email)
+    ).order_by('-fecha_creacion')
+
+    return render(request, 'core/mis_solicitudes_confeccion.html', {
+        'solicitudes': solicitudes,
+        'cart_count': _cart_count(request),
+    })
 
 # ------------------- Solicitud de confeccion -------------------
 
@@ -752,6 +783,10 @@ def solicitud_confeccion(request):
     Vista para que el cliente envíe una solicitud de confección a medida.
     Si el usuario está autenticado, se pre-rellena nombre, correo y teléfono.
     """
+    if request.session.get('admin_id'):
+        messages.info(request, 'Los administradores solo pueden revisar solicitudes desde el panel.')
+        return redirect('solicitudes_confeccion_list')
+
     initial_data = {}
 
     if request.user.is_authenticated:
@@ -940,6 +975,14 @@ def forgot_password_verify(request):
     if request.method == 'POST':
         email = (request.POST.get('email') or '').strip()
         phone = (request.POST.get('telefono') or '').strip()
+        try:
+            phone = validar_telefono_formato(phone)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return render(request, 'core/forgot_password_verify.html', {'username': username})
+        if not phone:
+            messages.error(request, 'Ingresa tu número con formato +569XXXXXXXX.')
+            return render(request, 'core/forgot_password_verify.html', {'username': username})
         try:
             user = User.objects.get(username=username, email=email, telefono=phone)
         except User.DoesNotExist:
