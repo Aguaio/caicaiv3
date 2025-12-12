@@ -19,19 +19,22 @@
           <span class="text-white font-bold text-xl">CAICAI</span>
         </div>
 
-        <div class="text-right text-xs sm:text-sm">
-          {% if user.is_authenticated %}
-            <p>Sesión: <strong>{{ user.username }}</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-700 font-semibold">Panel</a> ·
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% elif request.session.admin_id %}
-            <p>Sesión: <strong>Admin</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% endif %}
+        <div class="flex items-start justify-end gap-3">
+          {% include 'core/partials/low_stock_alert.html' %}
+          <div class="text-right text-xs sm:text-sm">
+            {% if user.is_authenticated %}
+              <p>Sesión: <strong>{{ user.username }}</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-700 font-semibold">Panel</a> ·
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% elif request.session.admin_id %}
+              <p>Sesión: <strong>Admin</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% endif %}
+          </div>
         </div>
       </div>
 
@@ -50,10 +53,10 @@
         <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
         <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
         <span class="font-semibold text-gray-900">Categorías</span>
+        <a href="{% url 'ventas_panel' %}" class="hover:text-gray-900">Ventas</a>
         <a href="{% url 'pedidos_list' %}" class="hover:text-gray-900">Pedidos</a>
-        <a href="{% url 'clientes_list' %}" class="hover:text-gray-900">Clientes</a>
-        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
         <a href="{% url 'solicitudes_confeccion_list' %}" class="hover:text-gray-900">Confección</a>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
       </nav>
 
       {% if messages %}

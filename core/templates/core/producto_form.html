@@ -19,13 +19,16 @@
           <span class="text-white font-bold text-xl">CAICAI</span>
         </div>
 
-        <div class="text-right text-xs sm:text-sm">
-          {% if user.is_authenticated %}
-            <p>Sesión: <strong>{{ user.username }}</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% endif %}
+        <div class="flex items-start justify-end gap-3">
+          {% include 'core/partials/low_stock_alert.html' %}
+          <div class="text-right text-xs sm:text-sm">
+            {% if user.is_authenticated %}
+              <p>Sesión: <strong>{{ user.username }}</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -70,13 +73,12 @@
 
         <!-- Categoría -->
         <div>
-          <label class="block text-sm font-medium mb-2">Categoría *</label>
+          <label class="block text-sm font-medium mb-2">Categoría (opcional)</label>
           <div class="w-full max-w-xs">
             <select
               name="categoria"
-              required
               class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400">
-              <option value="">Selecciona categoría</option>
+              <option value="">Sin categoría</option>
               {% with selected_id=values.categoria|default:'' %}
                 {% for c in categorias %}
                   <option value="{{ c.id }}" {% if selected_id|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>
@@ -92,16 +94,21 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium mb-2">Precio *</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              name="precio"
-              required
-              value="{{ values.precio|default:'' }}"
-              class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
-            >
-          </div>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="9999999.99"
+            name="precio"
+            required
+            value="{{ values.precio|default:'' }}"
+            class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
+          >
+          <p class="text-xs text-gray-500 mt-2">
+            Se mostrará como
+            <span id="precio-formateado" class="font-semibold text-gray-800">$0</span>
+          </p>
+        </div>
 
           <div>
             <label class="block text-sm font-medium mb-2">Stock</label>
@@ -109,6 +116,7 @@
               type="number"
               step="1"
               min="0"
+              max="9999999"
               name="stock"
               value="{{ values.stock|default:'' }}"
               class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400"
@@ -129,14 +137,20 @@
         <!-- Imagen -->
         <div>
           <label class="block text-sm font-medium mb-2">Imagen</label>
-          <input type="file" name="imagen"
+          <input type="file" name="imagen" id="imagen-input"
+                 accept="image/*"
                  class="block w-full text-sm text-gray-700">
-          {% if producto and producto.imagen %}
-            <p class="text-xs text-gray-500 mt-1">
-              Imagen actual:
-              <a href="{{ producto.imagen.url }}" target="_blank" class="underline">ver imagen</a>
+          <div id="imagen-preview" class="mt-3 space-y-2 {% if not producto or not producto.imagen %}hidden{% endif %}">
+            <p class="text-xs text-gray-500" id="imagen-preview-label">
+              {% if producto and producto.imagen %}Imagen actual:{% else %}Vista previa:{% endif %}
             </p>
-          {% endif %}
+            <img
+              id="imagen-preview-img"
+              src="{% if producto and producto.imagen %}{{ producto.imagen.url }}{% else %}#{% endif %}"
+              alt="Vista previa de la imagen"
+              class="h-36 w-auto rounded-lg border border-gray-200 shadow-sm object-contain bg-white"
+            >
+          </div>
         </div>
 
         <div class="pt-4 flex flex-col sm:flex-row gap-3">
@@ -153,5 +167,74 @@
       </form>
     </div>
   </main>
+  <script>
+    (function () {
+      const priceInput = document.querySelector('input[name="precio"]');
+      const stockInput = document.querySelector('input[name="stock"]');
+      const pricePreview = document.getElementById('precio-formateado');
+      const imageInput = document.getElementById('imagen-input');
+      const imagePreview = document.getElementById('imagen-preview');
+      const imagePreviewImg = document.getElementById('imagen-preview-img');
+      const imagePreviewLabel = document.getElementById('imagen-preview-label');
+
+      // Limita a 7 digitos en la parte entera y 2 decimales
+      const clampPrice = (val) => {
+        let cleaned = String(val || '').replace(/[^0-9.]/g, '');
+        const parts = cleaned.split('.');
+        const integer = (parts[0] || '').slice(0, 7);
+        const decimals = parts[1] ? parts[1].slice(0, 2) : '';
+        return decimals ? `${integer}.${decimals}` : integer;
+      };
+
+      const formatClp = (val) => {
+        const numberOnly = String(val || '').replace(/[^0-9]/g, '');
+        const num = Number(numberOnly || '0');
+        return '$' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      };
+
+      if (priceInput) {
+        priceInput.addEventListener('input', (e) => {
+          const newVal = clampPrice(e.target.value);
+          if (newVal !== e.target.value) {
+            e.target.value = newVal;
+          }
+          if (pricePreview) {
+            pricePreview.textContent = formatClp(newVal);
+          }
+        });
+        // Inicializa preview
+        if (pricePreview) {
+          pricePreview.textContent = formatClp(priceInput.value);
+        }
+      }
+
+      if (stockInput) {
+        stockInput.addEventListener('input', (e) => {
+          const digits = String(e.target.value || '').replace(/\D/g, '').slice(0, 7);
+          if (digits !== e.target.value) {
+            e.target.value = digits;
+          }
+        });
+      }
+
+      if (imageInput && imagePreview && imagePreviewImg) {
+        imageInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) {
+            if (!imagePreviewImg.getAttribute('src') || imagePreviewImg.getAttribute('src') === '#') {
+              imagePreview.classList.add('hidden');
+            }
+            return;
+          }
+          const url = URL.createObjectURL(file);
+          imagePreviewImg.src = url;
+          if (imagePreviewLabel) {
+            imagePreviewLabel.textContent = 'Vista previa:';
+          }
+          imagePreview.classList.remove('hidden');
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

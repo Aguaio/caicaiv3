@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load dict_extras %}
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -198,7 +199,7 @@
                 {{ p.nombre }}
               </h3>
               <p class="text-lg font-bold text-gray-900">
-                ${{ p.precio }}
+                {{ p.precio|precio_clp }}
               </p>
             </div>
 

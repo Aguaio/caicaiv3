@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load dict_extras %}
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -47,6 +48,12 @@
             <p class="mt-1">
               <a href="{% url 'mis_pedidos' %}" class="hover:text-gray-700">Mis pedidos</a> ·
               <a href="{% url 'editar_perfil' %}" class="hover:text-gray-700">Perfil</a> ·
+              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+            </p>
+          {% elif request.session.admin_id %}
+            <p>Sesión: <strong>Admin</strong></p>
+            <p class="mt-1">
+              <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-700">Panel</a> ·
               <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
             </p>
           {% else %}
@@ -141,29 +148,37 @@
                   <div>
                     <h3 class="font-semibold text-sm mb-1">{{ p.nombre }}</h3>
                     <p class="text-gray-500 text-[11px] sm:hidden">
-                      Cantidad: {{ p.cantidad }} · ${{ p.precio }}
+                    Precio unitario: {{ p.precio|precio_clp }}
                     </p>
-                    {% if not p.stock_ok %}
+                    {% if not p.activo %}
+                      <p class="text-xs text-red-600 mt-1">Producto deshabilitado. Eliminalo o reemplazalo.</p>
+                    {% elif not p.stock_ok %}
                       <p class="text-xs text-red-600 mt-1">Sin stock (disp: {{ p.stock }})</p>
                     {% endif %}
                   </div>
                 </div>
 
                 <!-- Cantidad -->
-                <div class="hidden sm:flex sm:col-span-2 justify-center">
-                  <span class="px-3 py-1 border rounded text-sm bg-gray-50">
-                    {{ p.cantidad }}
-                  </span>
+                <div class="col-span-12 sm:col-span-2 flex flex-wrap sm:flex-nowrap items-center justify-between sm:justify-center gap-3">
+                  <form action="{% url 'actualizar_cantidad_carrito' p.id %}" method="post" class="flex items-center gap-2 w-full sm:w-auto qty-form">
+                    {% csrf_token %}
+                    <div class="flex items-center gap-1">
+                      <button type="button" class="w-8 h-8 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 qty-btn" data-target="qty-{{ p.id }}" data-delta="-1">-</button>
+                      <input id="qty-{{ p.id }}" name="cantidad" type="number" min="1" value="{{ p.cantidad }}" class="w-14 text-center border border-gray-300 rounded py-1 text-sm qty-input" aria-label="Cantidad para {{ p.nombre }}">
+                      <button type="button" class="w-8 h-8 rounded border border-gray-300 text-gray-700 hover:bg-gray-100 qty-btn" data-target="qty-{{ p.id }}" data-delta="1">+</button>
+                    </div>
+                    <button type="submit" class="hidden">Actualizar</button>
+                  </form>
                 </div>
 
                 <!-- Precio unitario -->
                 <div class="hidden sm:flex sm:col-span-2 justify-center font-medium">
-                  ${{ p.precio }}
+                  {{ p.precio|precio_clp }}
                 </div>
 
                 <!-- Subtotal -->
                 <div class="hidden sm:flex sm:col-span-2 justify-center font-bold">
-                  ${{ p.subtotal }}
+                  {{ p.subtotal|precio_clp }}
                 </div>
 
                 <!-- Eliminar -->
@@ -201,7 +216,7 @@
           <div class="space-y-2 text-xs sm:text-sm mb-4">
             <div class="flex justify-between">
               <span class="text-gray-600">Subtotal</span>
-              <span class="font-medium">${{ total }}</span>
+              <span class="font-medium">{{ total|precio_clp }}</span>
             </div>
             <div class="flex justify-between">
               <span class="text-gray-600">Envío</span>
@@ -210,7 +225,7 @@
             <div class="border-t pt-3 mt-2">
               <div class="flex justify-between items-center">
                 <span class="font-bold text-sm sm:text-base">TOTAL</span>
-                <span class="font-bold text-lg sm:text-xl">${{ total }}</span>
+                <span class="font-bold text-lg sm:text-xl">{{ total|precio_clp }}</span>
               </div>
             </div>
           </div>
@@ -227,7 +242,7 @@
               type="button"
               disabled
               class="w-full bg-gray-300 text-gray-600 py-3 rounded font-bold text-xs sm:text-sm cursor-not-allowed">
-              Ajusta stock para continuar
+              Revisa los productos para continuar
             </button>
           {% elif user.is_authenticated and user.bloqueado %}
             <button
@@ -272,6 +287,38 @@
 
   <!-- Desvanecer mensajes -->
   <script>
+    // Controles +/- con auto-submit
+    const submitQtyForm = (input) => {
+      if (!input) return;
+      const form = input.closest('form');
+      if (!form) return;
+      const val = parseInt(input.value, 10);
+      input.value = isNaN(val) || val < 1 ? 1 : val;
+      if (form.requestSubmit) {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    };
+
+    document.querySelectorAll('.qty-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const delta = parseInt(btn.getAttribute('data-delta') || '0', 10);
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        const current = parseInt(input.value, 10) || 0;
+        const next = Math.max(1, current + delta);
+        input.value = next;
+        submitQtyForm(input);
+      });
+    });
+
+    document.querySelectorAll('.qty-input').forEach(input => {
+      input.addEventListener('change', () => submitQtyForm(input));
+      input.addEventListener('blur', () => submitQtyForm(input));
+    });
+
     setTimeout(() => {
       document.querySelectorAll('.success, .error').forEach(el => {
         el.style.transition = 'opacity 0.5s';

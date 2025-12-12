@@ -22,18 +22,21 @@
           <span class="text-white font-bold text-xl">CAICAI</span>
         </div>
 
-        <div class="text-right text-xs sm:text-sm">
-          {% if user.is_authenticated %}
-            <p>Sesión: <strong>{{ user.username }}</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% elif request.session.admin_id %}
-            <p>Sesión: <strong>Admin</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% endif %}
+        <div class="flex items-start justify-end gap-3">
+          {% include 'core/partials/low_stock_alert.html' %}
+          <div class="text-right text-xs sm:text-sm">
+            {% if user.is_authenticated %}
+              <p>Sesión: <strong>{{ user.username }}</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% elif request.session.admin_id %}
+              <p>Sesión: <strong>Admin</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% endif %}
+          </div>
         </div>
       </div>
 
@@ -54,10 +57,11 @@
         <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
         <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
         <a href="{% url 'categorias_list' %}" class="hover:text-gray-900">Categorías</a>
+        <a href="{% url 'ventas_panel' %}" class="hover:text-gray-900">Ventas</a>
         <a href="{% url 'pedidos_list' %}" class="hover:text-gray-900">Pedidos</a>
         <span class="font-semibold text-gray-900">Clientes</span>
-        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
         <a href="{% url 'solicitudes_confeccion_list' %}" class="hover:text-gray-900">Confección</a>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
       </nav>
 
       {% if messages %}
@@ -78,6 +82,18 @@
             Gestiona las cuentas de los clientes: visualiza su estado y bloquea/desbloquea cuando sea necesario.
           </p>
         </div>
+        <form method="get" class="flex items-center gap-2">
+          <input
+            type="text"
+            name="q"
+            value="{{ search|default:'' }}"
+            placeholder="Buscar por usuario o correo"
+            class="px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-300"
+          >
+          <button type="submit" class="bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800">
+            Buscar
+          </button>
+        </form>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -137,23 +153,35 @@
                         No editable (admin)
                       </span>
                     {% else %}
-                      {% if c.bloqueado %}
-                        <form action="{% url 'cliente_desbloquear' c.id %}" method="post" class="inline">
+                      <div class="flex flex-wrap gap-2 justify-center">
+                        {% if c.bloqueado %}
+                          <form action="{% url 'cliente_desbloquear' c.id %}" method="post" class="inline">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">
+                              Desbloquear
+                            </button>
+                          </form>
+                        {% else %}
+                          <form action="{% url 'cliente_bloquear' c.id %}" method="post" class="inline">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700">
+                              Bloquear
+                            </button>
+                          </form>
+                        {% endif %}
+
+                        <form action="{% url 'cliente_eliminar' c.id %}" method="post" class="inline" id="form-delete-{{ c.id }}">
                           {% csrf_token %}
-                          <button type="submit"
-                                  class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">
-                            Desbloquear
+                          <button type="button"
+                                  data-target="form-delete-{{ c.id }}"
+                                  data-message="¿Eliminar definitivamente al cliente {{ c.username }}? Esta acción no se puede deshacer."
+                                  class="confirm-delete inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 text-white hover:bg-black">
+                            Eliminar
                           </button>
                         </form>
-                      {% else %}
-                        <form action="{% url 'cliente_bloquear' c.id %}" method="post" class="inline">
-                          {% csrf_token %}
-                          <button type="submit"
-                                  class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white hover:bg-red-700">
-                            Bloquear
-                          </button>
-                        </form>
-                      {% endif %}
+                      </div>
                     {% endif %}
                   </td>
                 </tr>
@@ -170,5 +198,53 @@
       </div>
     </div>
   </main>
+
+  <!-- Modal de confirmación -->
+  <div id="confirm-overlay" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-5" id="confirm-modal">
+      <p id="confirm-message" class="text-sm text-gray-800 mb-4"></p>
+      <div class="flex justify-end gap-3 text-sm">
+        <button id="confirm-cancel" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100">Cancelar</button>
+        <button id="confirm-accept" class="px-4 py-2 rounded-lg bg-gray-900 text-white font-semibold hover:bg-gray-800">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const overlay = document.getElementById('confirm-overlay');
+      const modal = document.getElementById('confirm-modal');
+      const msg = document.getElementById('confirm-message');
+      const cancelBtn = document.getElementById('confirm-cancel');
+      const acceptBtn = document.getElementById('confirm-accept');
+      let pendingFormId = null;
+
+      const close = () => {
+        overlay.classList.add('hidden');
+        pendingFormId = null;
+      };
+
+      document.querySelectorAll('.confirm-delete').forEach(btn => {
+        btn.addEventListener('click', () => {
+          pendingFormId = btn.getAttribute('data-target');
+          msg.textContent = btn.getAttribute('data-message') || '¿Confirmas esta acción?';
+          overlay.classList.remove('hidden');
+          modal.classList.remove('scale-95');
+        });
+      });
+
+      cancelBtn.addEventListener('click', close);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) close();
+      });
+
+      acceptBtn.addEventListener('click', () => {
+        if (!pendingFormId) return close();
+        const form = document.getElementById(pendingFormId);
+        if (form) form.submit();
+        close();
+      });
+    })();
+  </script>
 </body>
 </html>

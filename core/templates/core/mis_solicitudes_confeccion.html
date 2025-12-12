@@ -1,4 +1,5 @@
 {% load static %}
+{% load dict_extras %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -30,8 +31,6 @@
         <div class="text-right text-xs sm:text-sm text-gray-700 space-y-1">
           <p>Sesi&oacute;n: <strong>{{ user.username }}</strong></p>
           <p>
-            <a href="{% url 'mis_pedidos' %}" class="hover:text-gray-900">Mis pedidos</a> ·
-            <a href="{% url 'editar_perfil' %}" class="hover:text-gray-900">Perfil</a> ·
             <a href="{% url 'logout_unificado' %}" class="hover:text-gray-900 font-semibold">Cerrar sesi&oacute;n</a>
           </p>
           <p class="mt-2 flex justify-end items-center gap-1 text-xs">
@@ -57,6 +56,15 @@
         </div>
       {% endif %}
 
+      <div class="flex justify-center mb-6">
+        <div class="inline-flex items-center overflow-hidden rounded-full bg-white border border-gray-200 shadow-sm text-sm font-semibold">
+          <a href="{% url 'mis_pedidos' %}" class="px-4 py-2 text-gray-600 hover:bg-gray-100">Pedidos</a>
+          <span class="w-px h-6 bg-gray-200"></span>
+          <a href="#confecciones" class="px-4 py-2 text-gray-900 hover:bg-gray-100">Confecciones</a>
+        </div>
+      </div>
+
+      <section id="confecciones" class="scroll-mt-24">
       <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 class="text-2xl sm:text-3xl font-bold mb-1">Mis solicitudes de confecci&oacute;n</h1>
@@ -102,11 +110,34 @@
                     {% elif solicitud.estado == 'revisado' %}bg-blue-100 text-blue-800
                     {% elif solicitud.estado == 'cotizado' %}bg-emerald-100 text-emerald-800
                     {% elif solicitud.estado == 'rechazado' %}bg-red-100 text-red-800
+                    {% elif solicitud.estado == 'aceptado' %}bg-green-100 text-green-800
+                    {% elif solicitud.estado == 'cancelado' %}bg-red-100 text-red-800
                     {% else %}bg-gray-100 text-gray-700{% endif %}">
                     {{ solicitud.get_estado_display }}
                   </span>
+                  {% if solicitud.cotizacion_monto %}
+                    <div class="mt-2 text-xs text-gray-700">
+                      Cotizaci&oacute;n: <span class="font-semibold">{{ solicitud.cotizacion_monto|precio_clp }}</span>
+                    </div>
+                  {% endif %}
+                  {% if solicitud.estado == 'cotizado' and solicitud.cotizacion_monto and solicitud.cotizacion_aceptada == None %}
+                    <form method="post" action="{% url 'respuesta_cotizacion' solicitud.id %}" class="mt-3 flex flex-col gap-2">
+                      {% csrf_token %}
+                      <div class="inline-flex gap-2 justify-center">
+                        <button name="decision" value="aceptar" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Aceptar</button>
+                        <button name="decision" value="rechazar" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-red-600 text-white hover:bg-red-700">Rechazar</button>
+                      </div>
+                    </form>
+                  {% elif solicitud.cotizacion_aceptada == True %}
+                    <p class="mt-2 text-xs text-emerald-700 font-semibold">Has aceptado la cotizaci&oacute;n.</p>
+                  {% elif solicitud.cotizacion_aceptada == False %}
+                    <p class="mt-2 text-xs text-red-700 font-semibold">Has rechazado la cotizaci&oacute;n.</p>
+                  {% endif %}
                 </div>
-                <div class="text-center text-xs text-gray-600">
+                <div class="text-center text-xs text-gray-600 space-y-2">
+                  {% if solicitud.boleta_url %}
+                    <a href="{{ solicitud.boleta_url }}" target="_blank" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700">Ver / Descargar boleta</a>
+                  {% endif %}
                   {% if solicitud.respuesta %}
                     <div class="inline-flex text-left bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-3 rounded-lg max-w-xs w-full">
                       <div class="space-y-1">
@@ -149,10 +180,21 @@
                     {% elif solicitud.estado == 'revisado' %}bg-blue-100 text-blue-800
                     {% elif solicitud.estado == 'cotizado' %}bg-emerald-100 text-emerald-800
                     {% elif solicitud.estado == 'rechazado' %}bg-red-100 text-red-800
+                    {% elif solicitud.estado == 'aceptado' %}bg-green-100 text-green-800
+                    {% elif solicitud.estado == 'cancelado' %}bg-red-100 text-red-800
                     {% else %}bg-gray-100 text-gray-700{% endif %}">
                     {{ solicitud.get_estado_display }}
                   </span>
                 </div>
+                {% if solicitud.cotizacion_monto %}
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-500">Cotizaci&oacute;n:</span>
+                    <span class="font-semibold text-gray-900">{{ solicitud.cotizacion_monto|precio_clp }}</span>
+                  </div>
+                {% endif %}
+                {% if solicitud.boleta_url %}
+                  <a href="{{ solicitud.boleta_url }}" target="_blank" class="block text-center px-3 py-2 rounded-md bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">Ver / Descargar boleta</a>
+                {% endif %}
                 {% if solicitud.respuesta %}
                   <div class="bg-emerald-50 border border-emerald-100 text-emerald-700 px-3 py-2 rounded-md text-[12px] leading-snug">
                     <span class="font-semibold block text-[11px] uppercase tracking-wide">Respuesta</span>
@@ -163,6 +205,17 @@
                     <span class="font-semibold block text-[11px] uppercase tracking-wide">Notas</span>
                     <span class="block">{{ solicitud.observaciones_admin }}</span>
                   </div>
+                {% endif %}
+                {% if solicitud.estado == 'cotizado' and solicitud.cotizacion_monto and solicitud.cotizacion_aceptada == None %}
+                  <form method="post" action="{% url 'respuesta_cotizacion' solicitud.id %}" class="flex gap-2 pt-1">
+                    {% csrf_token %}
+                    <button name="decision" value="aceptar" class="flex-1 px-3 py-2 rounded-md text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Aceptar</button>
+                    <button name="decision" value="rechazar" class="flex-1 px-3 py-2 rounded-md text-xs font-semibold bg-red-600 text-white hover:bg-red-700">Rechazar</button>
+                  </form>
+                {% elif solicitud.cotizacion_aceptada == True %}
+                  <p class="text-xs text-emerald-700 font-semibold">Has aceptado la cotizaci&oacute;n.</p>
+                {% elif solicitud.cotizacion_aceptada == False %}
+                  <p class="text-xs text-red-700 font-semibold">Has rechazado la cotizaci&oacute;n.</p>
                 {% endif %}
               </div>
             </div>
@@ -179,6 +232,7 @@
           </button>
         </div>
       {% endif %}
+      </section>
     </div>
   </main>
 

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load dict_extras %}
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -123,7 +124,7 @@
                   <div>
                     <h3 class="font-semibold text-sm mb-1">{{ p.nombre }}</h3>
                     <p class="text-gray-500 text-[11px] sm:hidden">
-                      Cantidad: {{ p.cantidad }} · ${{ p.precio }}
+                    Cantidad: {{ p.cantidad }} · {{ p.precio|precio_clp }}
                     </p>
                   </div>
                 </div>
@@ -133,10 +134,10 @@
                   </span>
                 </div>
                 <div class="hidden sm:flex sm:col-span-2 justify-center font-medium">
-                  ${{ p.precio }}
+                  {{ p.precio|precio_clp }}
                 </div>
                 <div class="hidden sm:flex sm:col-span-2 justify-center font-bold">
-                  ${{ p.subtotal }}
+                  {{ p.subtotal|precio_clp }}
                 </div>
               </div>
             {% endfor %}
@@ -149,7 +150,7 @@
             <div class="space-y-2 text-xs sm:text-sm mb-2">
               <div class="flex justify-between">
                 <span class="text-gray-600">Subtotal</span>
-                <span class="font-medium">${{ total }}</span>
+                <span class="font-medium">{{ total|precio_clp }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Envío</span>
@@ -158,7 +159,7 @@
               <div class="border-t pt-3 mt-2">
                 <div class="flex justify-between items-center">
                   <span class="font-bold text-sm sm:text-base">TOTAL</span>
-                  <span class="font-bold text-lg sm:text-xl">${{ total }}</span>
+                  <span class="font-bold text-lg sm:text-xl">{{ total|precio_clp }}</span>
                 </div>
               </div>
             </div>

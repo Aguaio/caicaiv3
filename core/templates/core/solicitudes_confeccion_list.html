@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load dict_extras %}
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -22,18 +23,21 @@
           <span class="text-white font-bold text-xl">CAICAI</span>
         </div>
 
-        <div class="text-right text-xs sm:text-sm">
-          {% if user.is_authenticated %}
-            <p>Sesión: <strong>{{ user.username }}</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% elif request.session.admin_id %}
-            <p>Sesión: <strong>Admin</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% endif %}
+        <div class="flex items-start justify-end gap-3">
+          {% include 'core/partials/low_stock_alert.html' %}
+          <div class="text-right text-xs sm:text-sm">
+            {% if user.is_authenticated %}
+              <p>Sesión: <strong>{{ user.username }}</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% elif request.session.admin_id %}
+              <p>Sesión: <strong>Admin</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% endif %}
+          </div>
         </div>
       </div>
 
@@ -55,10 +59,10 @@
         <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
         <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
         <a href="{% url 'categorias_list' %}" class="hover:text-gray-900">Categorías</a>
+        <a href="{% url 'ventas_panel' %}" class="hover:text-gray-900">Ventas</a>
         <a href="{% url 'pedidos_list' %}" class="hover:text-gray-900">Pedidos</a>
-        <a href="{% url 'clientes_list' %}" class="hover:text-gray-900">Clientes</a>
-        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
         <span class="font-semibold text-gray-900">Confección</span>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
       </nav>
 
       {% if messages %}
@@ -81,7 +85,48 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <form id="filtro-confecciones" method="get" class="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 text-sm">
+          <div class="flex flex-col">
+            <label class="text-xs text-gray-600 mb-1">Estado</label>
+            <select name="estado" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300">
+              <option value="todos" {% if estado == 'todos' %}selected{% endif %}>Todos</option>
+              <option value="pendiente" {% if estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+              <option value="revisado" {% if estado == 'revisado' %}selected{% endif %}>Revisado</option>
+              <option value="cotizado" {% if estado == 'cotizado' %}selected{% endif %}>Cotizado</option>
+              <option value="rechazado" {% if estado == 'rechazado' %}selected{% endif %}>Rechazado</option>
+              <option value="aceptado" {% if estado == 'aceptado' %}selected{% endif %}>Aceptado por cliente</option>
+              <option value="cancelado" {% if estado == 'cancelado' %}selected{% endif %}>Cancelado por cliente</option>
+            </select>
+          </div>
+          <div class="flex flex-col">
+            <label class="text-xs text-gray-600 mb-1">Desde</label>
+            <div class="relative">
+              <input type="date" name="desde" value="{{ fecha_desde|default:'' }}" inputmode="none" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 pr-10 cursor-pointer bg-white">
+              <span class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">📅</span>
+            </div>
+          </div>
+          <div class="flex flex-col">
+            <label class="text-xs text-gray-600 mb-1">Hasta</label>
+            <div class="relative">
+              <input type="date" name="hasta" value="{{ fecha_hasta|default:'' }}" inputmode="none" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 pr-10 cursor-pointer bg-white">
+              <span class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">📅</span>
+            </div>
+          </div>
+          <div class="flex flex-col">
+            <label class="text-xs text-gray-600 mb-1">ID de solicitud</label>
+            <input type="number" name="solicitud_id" value="{{ solicitud_id|default:'' }}" min="1" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300" placeholder="#">
+          </div>
+        </div>
+        <div class="mt-4 flex items-center gap-3">
+          <button type="submit" class="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+            Aplicar filtros
+          </button>
+          <a href="{% url 'solicitudes_confeccion_list' %}" class="text-xs text-gray-500 hover:text-gray-700 underline">Limpiar</a>
+        </div>
+      </form>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
             <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
@@ -91,13 +136,14 @@
                 <th class="px-4 py-3 text-left">Correo</th>
                 <th class="px-4 py-3 text-left">Tipo de prenda</th>
                 <th class="px-4 py-3 text-left">Estado</th>
+                <th class="px-4 py-3 text-left">Cotización</th>
                 <th class="px-4 py-3 text-left">Fecha</th>
                 <th class="px-4 py-3 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100">
               {% for s in solicitudes %}
-                <tr>
+                <tr class="hover:bg-gray-50">
                   <td class="px-4 py-3 text-gray-700 font-medium">#{{ s.id }}</td>
                   <td class="px-4 py-3">
                     <span class="font-medium text-gray-900">{{ s.nombre }}</span>
@@ -125,8 +171,23 @@
                       <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-700">
                         Rechazado
                       </span>
+                    {% elif s.estado == 'aceptado' %}
+                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-green-50 text-green-700">
+                        Aceptado por cliente
+                      </span>
+                    {% elif s.estado == 'cancelado' %}
+                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-700">
+                        Cancelado por cliente
+                      </span>
                     {% else %}
                       <span class="text-xs text-gray-600">{{ s.estado }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="px-4 py-3 text-gray-800">
+                    {% if s.cotizacion_monto %}
+                      {{ s.cotizacion_monto|precio_clp }}
+                    {% else %}
+                      <span class="text-xs text-gray-500">—</span>
                     {% endif %}
                   </td>
                   <td class="px-4 py-3 text-gray-600">
@@ -141,7 +202,7 @@
                 </tr>
               {% empty %}
                 <tr>
-                  <td colspan="7" class="px-4 py-6 text-center text-gray-500 text-sm">
+                  <td colspan="8" class="px-4 py-6 text-center text-gray-500 text-sm">
                     No hay solicitudes registradas.
                   </td>
                 </tr>
@@ -150,7 +211,43 @@
           </table>
         </div>
       </div>
+
+      <div class="mt-4 flex items-center justify-end">
+        <div class="bg-gray-900 text-white px-4 py-3 rounded-lg text-sm font-semibold shadow-sm">
+          Total de cotizaciones filtradas: {{ total_cotizaciones|precio_clp }}
+        </div>
+      </div>
     </div>
   </main>
 </body>
+<script>
+  (function () {
+    const form = document.getElementById('filtro-confecciones');
+    const desde = form ? form.querySelector('input[name="desde"]') : null;
+    const hasta = form ? form.querySelector('input[name="hasta"]') : null;
+
+    const syncMin = () => {
+      if (!desde || !hasta) return;
+      if (desde.value) {
+        hasta.min = desde.value;
+      } else {
+        hasta.removeAttribute('min');
+      }
+    };
+
+    if (desde && hasta && form) {
+      syncMin();
+      desde.addEventListener('change', syncMin);
+      form.addEventListener('submit', (e) => {
+        if (desde.value && hasta.value && hasta.value < desde.value) {
+          e.preventDefault();
+          hasta.setCustomValidity('La fecha hasta no puede ser anterior a la fecha desde.');
+          hasta.reportValidity();
+        } else {
+          hasta.setCustomValidity('');
+        }
+      });
+    }
+  })();
+</script>
 </html>

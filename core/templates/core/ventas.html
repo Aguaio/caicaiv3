@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+{% load dict_extras %}
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ventas — Panel Caicai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+  <!-- HEADER -->
+  <header class="border-b shadow-sm bg-white">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <button onclick="window.location.href='{% url 'home' %}'"
+                class="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+          <span class="text-lg">⇦</span>
+          <span class="font-medium">Ver tienda</span>
+        </button>
+
+        <div class="w-24 h-24 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-lg">
+          <span class="text-white font-bold text-xl">CAICAI</span>
+        </div>
+
+        <div class="flex items-start justify-end gap-3">
+          {% include 'core/partials/low_stock_alert.html' %}
+          <div class="text-right text-xs sm:text-sm">
+            {% if user.is_authenticated %}
+              <p>Sesión: <strong>{{ user.username }}</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% elif request.session.admin_id %}
+              <p>Sesión: <strong>Admin</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
+        <div>
+          <p class="uppercase tracking-wide font-semibold text-gray-600">Ventas</p>
+          <p>Resumen combinado de pedidos y solicitudes de confección.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO -->
+  <main class="py-8">
+    <div class="max-w-7xl mx-auto px-4 space-y-6">
+
+      <!-- Nav interno panel -->
+      <nav class="flex flex-wrap gap-3 text-xs sm:text-sm text-gray-600 mb-6">
+        <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
+        <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
+        <a href="{% url 'categorias_list' %}" class="hover:text-gray-900">Categorías</a>
+        <span class="font-semibold text-gray-900">Ventas</span>
+        <a href="{% url 'pedidos_list' %}" class="hover:text-gray-900">Pedidos</a>
+        <a href="{% url 'solicitudes_confeccion_list' %}" class="hover:text-gray-900">Confección</a>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
+      </nav>
+
+      {% if messages %}
+        {% for m in messages %}
+          <div class="mb-2 px-4 py-2 rounded-lg text-sm
+                      {% if m.tags == 'success' %}bg-emerald-50 text-emerald-700
+                      {% elif m.tags == 'error' %}bg-red-50 text-red-700
+                      {% else %}bg-gray-100 text-gray-700{% endif %}">
+            {{ m }}
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <!-- Resumen y filtros -->
+        <section class="xl:col-span-2 bg-white border border-gray-200 rounded-xl shadow-sm p-5 sm:p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <p class="text-xs text-gray-500 uppercase tracking-wide font-semibold">Ventas totales</p>
+              <p class="text-2xl font-bold text-gray-900">{{ ventas_totales|precio_clp }}</p>
+              <p class="text-sm text-gray-600">Suma de pedidos y cotizaciones aplicando los filtros.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3">
+                <p class="text-xs text-emerald-700 uppercase font-semibold">Pedidos</p>
+                <p class="text-lg font-bold text-emerald-800">{{ total_pedidos|precio_clp }}</p>
+              </div>
+              <div class="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
+                <p class="text-xs text-amber-700 uppercase font-semibold">Cotizaciones</p>
+                <p class="text-lg font-bold text-amber-800">{{ total_cotizaciones|precio_clp }}</p>
+              </div>
+            </div>
+          </div>
+
+          <form method="get" class="mt-5 grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 text-sm">
+            <div class="flex flex-col">
+              <label class="text-xs text-gray-600 mb-1">Estado pedidos</label>
+              <select name="estado_pedido" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300">
+                <option value="todos" {% if estado_pedido == 'todos' %}selected{% endif %}>Todos</option>
+                <option value="pendiente" {% if estado_pedido == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="en_proceso" {% if estado_pedido == 'en_proceso' %}selected{% endif %}>En proceso</option>
+                <option value="finalizado" {% if estado_pedido == 'finalizado' %}selected{% endif %}>Finalizado</option>
+                <option value="rechazado" {% if estado_pedido == 'rechazado' %}selected{% endif %}>Rechazado</option>
+              </select>
+            </div>
+            <div class="flex flex-col">
+              <label class="text-xs text-gray-600 mb-1">Estado confección</label>
+              <select name="estado_confeccion" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300">
+                <option value="todos" {% if estado_confeccion == 'todos' %}selected{% endif %}>Todos</option>
+                <option value="pendiente" {% if estado_confeccion == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="revisado" {% if estado_confeccion == 'revisado' %}selected{% endif %}>Revisado</option>
+                <option value="cotizado" {% if estado_confeccion == 'cotizado' %}selected{% endif %}>Cotizado</option>
+                <option value="rechazado" {% if estado_confeccion == 'rechazado' %}selected{% endif %}>Rechazado</option>
+                <option value="aceptado" {% if estado_confeccion == 'aceptado' %}selected{% endif %}>Aceptado por cliente</option>
+                <option value="cancelado" {% if estado_confeccion == 'cancelado' %}selected{% endif %}>Cancelado por cliente</option>
+              </select>
+            </div>
+            <div class="flex flex-col">
+              <label class="text-xs text-gray-600 mb-1">Desde</label>
+              <input type="date" name="desde" value="{{ fecha_desde|default:'' }}" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300">
+            </div>
+            <div class="flex flex-col">
+              <label class="text-xs text-gray-600 mb-1">Hasta</label>
+              <input type="date" name="hasta" value="{{ fecha_hasta|default:'' }}" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300">
+            </div>
+            <div class="md:col-span-4 flex items-center gap-3">
+              <button type="submit" class="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors">Aplicar filtros</button>
+              <a href="{% url 'ventas_panel' %}" class="text-sm text-gray-600 hover:text-gray-900 underline">Limpiar</a>
+            </div>
+          </form>
+        </section>
+
+        <!-- Pedidos -->
+        <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-bold">Pedidos recientes</h2>
+              <p class="text-sm text-gray-600">Últimos 50 pedidos realizados.</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-gray-500">Total acumulado</p>
+              <p class="text-lg font-bold text-gray-900">{{ total_pedidos|precio_clp }}</p>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-xs sm:text-sm">
+              <thead class="bg-gray-50 border-b">
+                <tr class="text-left text-gray-600">
+                  <th class="px-3 py-2">ID</th>
+                  <th class="px-3 py-2">Cliente</th>
+                  <th class="px-3 py-2">Fecha</th>
+                  <th class="px-3 py-2">Total</th>
+                  <th class="px-3 py-2">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in pedidos %}
+                  <tr class="border-b last:border-0 hover:bg-gray-50">
+                    <td class="px-3 py-2 text-gray-500">#{{ p.id }}</td>
+                    <td class="px-3 py-2">{{ p.nombre_cliente|default:"-" }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ p.fecha|date:"d/m/Y H:i" }}</td>
+                    <td class="px-3 py-2 font-semibold text-gray-900">{{ p.total|precio_clp }}</td>
+                    <td class="px-3 py-2">
+                      <span class="inline-flex px-2 py-1 text-[11px] font-semibold rounded-full
+                        {% if p.estado == 'finalizado' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                        {% elif p.estado == 'rechazado' %}bg-red-50 text-red-700 border border-red-200
+                        {% elif p.estado == 'en_proceso' %}bg-amber-50 text-amber-700 border border-amber-200
+                        {% else %}bg-gray-100 text-gray-700 border border-gray-200{% endif %}">
+                        {{ p.get_estado_display }}
+                      </span>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5" class="px-3 py-4 text-center text-gray-500">No hay pedidos registrados.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3 text-right">
+            <a href="{% url 'pedidos_list' %}" class="text-sm text-teal-600 hover:text-teal-700 font-semibold">Ver todos los pedidos →</a>
+          </div>
+        </section>
+
+        <!-- Confecciones -->
+        <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-5 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-lg font-bold">Solicitudes de confección</h2>
+              <p class="text-sm text-gray-600">Últimas 50 solicitudes.</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs text-gray-500">Total cotizado</p>
+              <p class="text-lg font-bold text-gray-900">{{ total_cotizaciones|precio_clp }}</p>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-xs sm:text-sm">
+              <thead class="bg-gray-50 border-b">
+                <tr class="text-left text-gray-600">
+                  <th class="px-3 py-2">ID</th>
+                  <th class="px-3 py-2">Cliente</th>
+                  <th class="px-3 py-2">Fecha</th>
+                  <th class="px-3 py-2">Monto</th>
+                  <th class="px-3 py-2">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in solicitudes %}
+                  <tr class="border-b last:border-0 hover:bg-gray-50">
+                    <td class="px-3 py-2 text-gray-500">#{{ s.id }}</td>
+                    <td class="px-3 py-2">{{ s.nombre|default:"-" }}</td>
+                    <td class="px-3 py-2 text-gray-700">{{ s.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                    <td class="px-3 py-2 font-semibold text-gray-900">
+                      {% if s.cotizacion_monto %}{{ s.cotizacion_monto|precio_clp }}{% else %}-{% endif %}
+                    </td>
+                    <td class="px-3 py-2">
+                      <span class="inline-flex px-2 py-1 text-[11px] font-semibold rounded-full
+                        {% if s.estado == 'aceptado' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                        {% elif s.estado == 'rechazado' or s.estado == 'cancelado' %}bg-red-50 text-red-700 border border-red-200
+                        {% elif s.estado == 'cotizado' %}bg-amber-50 text-amber-700 border border-amber-200
+                        {% else %}bg-gray-100 text-gray-700 border border-gray-200{% endif %}">
+                        {{ s.get_estado_display }}
+                      </span>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5" class="px-3 py-4 text-center text-gray-500">No hay solicitudes registradas.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3 text-right">
+            <a href="{% url 'solicitudes_confeccion_list' %}" class="text-sm text-teal-600 hover:text-teal-700 font-semibold">Ver todas las solicitudes →</a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-white border-t py-6 mt-10">
+    <div class="max-w-7xl mx-auto px-4 text-center text-xs sm:text-sm text-gray-500">
+      <p>© 2025 Caicai — Panel de ventas.</p>
+    </div>
+  </footer>
+</body>
+</html>

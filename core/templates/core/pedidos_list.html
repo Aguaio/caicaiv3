@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% load dict_extras %}
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -21,18 +22,21 @@
           <span class="text-white font-bold text-xl">CAICAI</span>
         </div>
 
-        <div class="text-right text-xs sm:text-sm">
-          {% if user.is_authenticated %}
-            <p>Sesión: <strong>{{ user.username }}</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% elif request.session.admin_id %}
-            <p>Sesión: <strong>Admin</strong></p>
-            <p class="mt-1">
-              <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
-            </p>
-          {% endif %}
+        <div class="flex items-start justify-end gap-3">
+          {% include 'core/partials/low_stock_alert.html' %}
+          <div class="text-right text-xs sm:text-sm">
+            {% if user.is_authenticated %}
+              <p>Sesión: <strong>{{ user.username }}</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% elif request.session.admin_id %}
+              <p>Sesión: <strong>Admin</strong></p>
+              <p class="mt-1">
+                <a href="{% url 'logout_unificado' %}" class="hover:text-gray-700 font-semibold">Cerrar sesión</a>
+              </p>
+            {% endif %}
+          </div>
         </div>
       </div>
 
@@ -52,10 +56,10 @@
         <a href="{% url 'admin_dashboard' %}" class="hover:text-gray-900">Panel</a>
         <a href="{% url 'productos_list' %}" class="hover:text-gray-900">Productos</a>
         <a href="{% url 'categorias_list' %}" class="hover:text-gray-900">Categorías</a>
+        <a href="{% url 'ventas_panel' %}" class="hover:text-gray-900">Ventas</a>
         <span class="font-semibold text-gray-900">Pedidos</span>
-        <a href="{% url 'clientes_list' %}" class="hover:text-gray-900">Clientes</a>
-        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
         <a href="{% url 'solicitudes_confeccion_list' %}" class="hover:text-gray-900">Confección</a>
+        <a href="{% url 'historial_clientes' %}" class="hover:text-gray-900">Historial de clientes</a>
       </nav>
 
       <div class="flex items-center justify-between mb-6">
@@ -65,24 +69,65 @@
             Revisa los pedidos realizados en la tienda y accede al detalle para cambiar su estado.
           </p>
         </div>
-        <form method="get" action="{% url 'pedidos_list' %}" class="flex items-center gap-2 text-sm">
-          <input
-            type="number"
-            name="pedido_id"
-            value="{{ pedido_id|default:'' }}"
-            min="1"
-            placeholder="ID de pedido"
-            class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 w-32">
-          <button
-            type="submit"
-            class="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors">
-            Buscar
-          </button>
-          {% if pedido_id %}
-            <a href="{% url 'pedidos_list' %}" class="text-xs text-gray-500 hover:text-gray-700 underline">Limpiar</a>
-          {% endif %}
-        </form>
+        <div class="w-full">
+          <form id="filtro-pedidos" method="get" action="{% url 'pedidos_list' %}" class="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 text-sm">
+              <div class="flex flex-col">
+                <label class="text-xs text-gray-600 mb-1">Estado</label>
+                <select name="estado" class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300">
+                  <option value="todos" {% if estado == 'todos' %}selected{% endif %}>Todos</option>
+                  <option value="pendiente" {% if estado == 'pendiente' %}selected{% endif %}>Pendientes</option>
+                  <option value="en_proceso" {% if estado == 'en_proceso' %}selected{% endif %}>En proceso</option>
+                  <option value="finalizado" {% if estado == 'finalizado' %}selected{% endif %}>Finalizados</option>
+                  <option value="rechazado" {% if estado == 'rechazado' %}selected{% endif %}>Rechazados</option>
+                </select>
+              </div>
+              <div class="flex flex-col">
+                <label class="text-xs text-gray-600 mb-1">Desde</label>
+                <div class="relative">
+                  <input type="date" name="desde" value="{{ fecha_desde|default:'' }}" inputmode="none" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 pr-10 cursor-pointer bg-white">
+                  <span class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">📅</span>
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <label class="text-xs text-gray-600 mb-1">Hasta</label>
+                <div class="relative">
+                  <input type="date" name="hasta" value="{{ fecha_hasta|default:'' }}" inputmode="none" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 pr-10 cursor-pointer bg-white">
+                  <span class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">📅</span>
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <label class="text-xs text-gray-600 mb-1">ID de pedido</label>
+                <input
+                  type="number"
+                  name="pedido_id"
+                  value="{{ pedido_id|default:'' }}"
+                  min="1"
+                  placeholder="#"
+                  class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 w-full">
+              </div>
+            </div>
+            <div class="mt-4 flex items-center gap-3">
+              <button
+                type="submit"
+                class="px-4 py-2 bg-gray-900 text-white rounded-lg font-semibold hover:bg-gray-800 transition-colors">
+                Aplicar filtros
+              </button>
+              <a href="{% url 'pedidos_list' %}" class="text-xs text-gray-500 hover:text-gray-700 underline">Limpiar</a>
+            </div>
+          </form>
+        </div>
       </div>
+
+      {% if messages %}
+        <div class="mb-4 space-y-2">
+          {% for m in messages %}
+            <div class="px-4 py-2 rounded-lg text-sm {% if m.tags == 'success' %}bg-emerald-50 text-emerald-700{% else %}bg-red-50 text-red-700{% endif %}">
+              {{ m }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
 
       <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="overflow-x-auto">
@@ -138,7 +183,7 @@
                     {% endif %}
                   </td>
                   <td class="px-4 py-3 text-right font-semibold text-gray-800">
-                    ${{ p.total }}
+                    {{ p.total|precio_clp }}
                   </td>
                   <td class="px-4 py-3 text-center">
                     <a href="{% url 'pedido_detalle' p.id %}"
@@ -159,81 +204,64 @@
         </div>
       </div>
 
-      <div class="mt-10 flex items-center justify-between mb-3">
-        <div>
-          <h2 class="text-xl font-bold">Solicitudes de confección</h2>
-          <p class="text-sm text-gray-600">Vista rápida de los pedidos de confección a medida.</p>
-        </div>
-        <a href="{% url 'solicitudes_confeccion_list' %}"
-           class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800">
-          Ver todo
-        </a>
-      </div>
-
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm">
-            <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-              <tr>
-                <th class="px-4 py-3 text-left">#</th>
-                <th class="px-4 py-3 text-left">Cliente</th>
-                <th class="px-4 py-3 text-left">Correo</th>
-                <th class="px-4 py-3 text-left">Tipo</th>
-                <th class="px-4 py-3 text-left">Estado</th>
-                <th class="px-4 py-3 text-left">Fecha</th>
-                <th class="px-4 py-3 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-              {% for s in confecciones %}
-                <tr>
-                  <td class="px-4 py-3 text-gray-700 font-medium">#{{ s.id }}</td>
-                  <td class="px-4 py-3">
-                    <span class="font-medium text-gray-900">{{ s.nombre }}</span>
-                  </td>
-                  <td class="px-4 py-3 text-gray-700">{{ s.correo }}</td>
-                  <td class="px-4 py-3 text-gray-700">{{ s.get_tipo_prenda_display|default:s.tipo_prenda }}</td>
-                  <td class="px-4 py-3">
-                    {% if s.estado == 'pendiente' %}
-                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-yellow-50 text-yellow-700">
-                        Pendiente
-                      </span>
-                    {% elif s.estado == 'revisado' %}
-                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700">
-                        Revisado
-                      </span>
-                    {% elif s.estado == 'cotizado' %}
-                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700">
-                        Cotizado
-                      </span>
-                    {% elif s.estado == 'rechazado' %}
-                      <span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-700">
-                        Rechazado
-                      </span>
-                    {% else %}
-                      <span class="text-xs text-gray-600">{{ s.estado }}</span>
-                    {% endif %}
-                  </td>
-                  <td class="px-4 py-3 text-gray-600">{{ s.fecha_creacion|date:"d/m/Y H:i" }}</td>
-                  <td class="px-4 py-3 text-center">
-                    <a href="{% url 'solicitud_confeccion_detalle' s.id %}"
-                       class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-gray-800">
-                      Detalle
-                    </a>
-                  </td>
-                </tr>
-              {% empty %}
-                <tr>
-                  <td colspan="7" class="px-4 py-6 text-center text-gray-500 text-sm">
-                    No hay solicitudes de confección registradas.
-                  </td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+      <div class="mt-4 flex items-center justify-end">
+        <div class="bg-gray-900 text-white px-4 py-3 rounded-lg text-sm font-semibold shadow-sm">
+          Total de pedidos filtrados: {{ total_pedidos|precio_clp }}
         </div>
       </div>
     </div>
   </main>
+  <script>
+    (function () {
+      const form = document.getElementById('filtro-pedidos');
+      const desde = form ? form.querySelector('input[name="desde"]') : null;
+      const hasta = form ? form.querySelector('input[name="hasta"]') : null;
+      const lockTyping = (input) => {
+        if (!input) return;
+        input.addEventListener('keydown', (e) => {
+          const allowedKeys = ['Tab', 'Shift', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Delete', 'Backspace', 'Escape'];
+          if (!allowedKeys.includes(e.key)) {
+            e.preventDefault();
+          }
+        });
+        input.addEventListener('focus', () => {
+          if (input.showPicker) {
+            input.showPicker();
+          }
+        });
+        input.addEventListener('click', () => {
+          if (input.showPicker) {
+            input.showPicker();
+          }
+        });
+      };
+
+      const syncMin = () => {
+        if (!desde || !hasta) return;
+        if (desde.value) {
+          hasta.min = desde.value;
+        } else {
+          hasta.removeAttribute('min');
+        }
+      };
+
+      if (desde && hasta) {
+        lockTyping(desde);
+        lockTyping(hasta);
+        syncMin();
+        desde.addEventListener('change', syncMin);
+
+        form.addEventListener('submit', (e) => {
+          if (desde.value && hasta.value && hasta.value < desde.value) {
+            e.preventDefault();
+            hasta.setCustomValidity('La fecha hasta no puede ser anterior a la fecha desde.');
+            hasta.reportValidity();
+          } else {
+            hasta.setCustomValidity('');
+          }
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
