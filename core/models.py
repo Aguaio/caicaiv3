@@ -28,7 +28,8 @@ class Producto(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField(default=0)
     imagen = models.ImageField(upload_to='productos/', blank=True, null=True)
-    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE)
+    categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True)
+    activo = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre
@@ -38,6 +39,21 @@ class Cliente(AbstractUser):
     direccion = models.CharField(max_length=255, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     bloqueado = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        old_username = None
+        if self.pk:
+            try:
+                old_username = Cliente.objects.get(pk=self.pk).username
+            except Cliente.DoesNotExist:
+                old_username = None
+
+        super().save(*args, **kwargs)
+
+        # Si cambió el username, propaga a pedidos e historial
+        if old_username and old_username != self.username:
+            Pedido.objects.filter(nombre_cliente=old_username).update(nombre_cliente=self.username)
+            HistorialCliente.objects.filter(nombre=old_username).update(nombre=self.username)
 
 class HistorialCliente(models.Model):
     nombre = models.CharField(max_length=150)
@@ -92,6 +108,8 @@ class SolicitudConfeccion(models.Model):
         ('revisado', 'Revisado'),
         ('cotizado', 'Cotizado'),
         ('rechazado', 'Rechazado'),
+        ('aceptado', 'Aceptado por cliente'),
+        ('cancelado', 'Cancelado por cliente'),
     ]
 
     # Si el usuario está logeado, lo guardamos; si no, queda en blanco
@@ -114,6 +132,8 @@ class SolicitudConfeccion(models.Model):
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     respuesta = models.TextField(blank=True, null=True)
     observaciones_admin = models.TextField(blank=True, null=True, default='')
+    cotizacion_monto = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cotizacion_aceptada = models.BooleanField(null=True, blank=True, default=None)
 
     def __str__(self):
         return f"Confección #{self.id} - {self.nombre} ({self.get_tipo_prenda_display()})"

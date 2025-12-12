@@ -81,9 +81,11 @@ class RegistroClienteForm(forms.ModelForm):
         cleaned_data = super().clean()
         p1 = cleaned_data.get("password1")
         p2 = cleaned_data.get("password2")
+        username = cleaned_data.get("username", "")
 
+        if p1 and username and p1.strip().lower() == username.strip().lower():
+            raise forms.ValidationError("La contrasena no puede ser igual al nombre de usuario.")
         if p1 and p2 and p1 != p2:
-
             raise forms.ValidationError("Las contraseñas no coinciden.")
         return cleaned_data
 
