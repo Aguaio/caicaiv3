@@ -1,0 +1,12 @@
+python manage.py shell
+
+# Cliente.objects.all()
+
+# Producto.objects.all()
+
+# Pedido.objects.all()
+
+# HistorialCliente.objects.all()
+
+# SolicitudConfeccion.objects.all()
+

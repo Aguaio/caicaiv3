@@ -1,0 +1,34 @@
+INSTRUCCIONES PARA LEVANTAR EL PROYECTO EN LOCAL
+
+Prerrequisitos
+- Python 3.12+ y pip instalados. En Windows descargalo de https://www.python.org/downloads/ y marca "Add python.exe to PATH".
+- Opcional: Git para clonar el repo.
+
+Pasos
+1) Coloca el proyecto en una carpeta (misma donde esta manage.py) y abre una terminal ahi.
+2) (Opcional) Crea un entorno virtual:
+   - Windows: python -m venv .venv
+   - Linux/macOS: python3 -m venv .venv
+3) Activa el entorno virtual:
+   - Windows (PowerShell): .\.venv\Scripts\Activate.ps1
+   - Windows (cmd): .\.venv\Scripts\activate.bat
+   - Linux/macOS: source .venv/bin/activate
+4) Instala dependencias: pip install -r requirements.txt
+5) Base de datos:
+   - Si quieres usar la bd incluida (db.sqlite3), no hagas nada.
+   - Si prefieres empezar limpia: borra db.sqlite3 y ejecuta:
+       python manage.py migrate
+       python manage.py createsuperuser   (opcional, crea admin)
+6) Archivos media: la carpeta media debe quedar en la raiz (ya existe). Si la borras, crea una vacia.
+7) Ejecuta el servidor de desarrollo:
+       python manage.py runserver
+   Abre http://127.0.0.1:8000 en el navegador.
+8) Comandos utiles:
+   - python manage.py makemigrations   (solo si cambias modelos)
+   - python manage.py migrate          (aplicar cambios pendientes)
+   - python manage.py createsuperuser  (crear usuario admin)
+   - deactivate                       (salir del entorno virtual)
+
+Notas
+- DEBUG esta en True; solo usar para desarrollo.
+- gunicorn esta en requirements para despliegues Linux, no es necesario en local Windows.
