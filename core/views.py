@@ -661,6 +661,30 @@ def producto_delete(request, id):
     producto = get_object_or_404(Producto, id=id)
     producto.activo = False
     producto.save(update_fields=['activo'])
+
+    # Rechaza pedidos abiertos que incluyan este producto descontinuado
+    motivo_rechazo = 'Producto descontinuado.'
+    pedidos_afectados = (
+        Pedido.objects
+        .filter(detalles__producto=producto)
+        .exclude(estado__in=['rechazado', 'finalizado'])
+        .distinct()
+    )
+    rechazados = 0
+    with transaction.atomic():
+        for pedido in pedidos_afectados:
+            pedido.estado = 'rechazado'
+            pedido.motivo_rechazo = motivo_rechazo
+            pedido.save(update_fields=['estado', 'motivo_rechazo'])
+            HistorialCliente.objects.create(
+                nombre=pedido.nombre_cliente,
+                correo=pedido.correo,
+                accion=f'Pedido {pedido.id} -> rechazado por producto descontinuado'
+            )
+            rechazados += 1
+
+    if rechazados:
+        messages.warning(request, f'Se rechazaron {rechazados} pedidos abiertos asociados a este producto (motivo: {motivo_rechazo}).')
     messages.success(request, 'Producto deshabilitado. Ya no aparecera en el catalogo.')
     return redirect('productos_list')
 
@@ -972,8 +996,13 @@ def historial_clientes(request):
 def solicitud_confeccion_detalle(request, id):
     solicitud = get_object_or_404(SolicitudConfeccion, id=id)
     solicitud.boleta_url = _boleta_confeccion(solicitud)
+    edicion_bloqueada = solicitud.estado in ('aceptado', 'cancelado')
 
     if request.method == 'POST':
+        if edicion_bloqueada:
+            messages.error(request, 'La solicitud ya fue finalizada por el cliente y no se puede editar.')
+            return redirect('solicitud_confeccion_detalle', id=solicitud.id)
+
         nuevo_estado = (request.POST.get('estado') or solicitud.estado).strip()
         observaciones = (request.POST.get('observaciones_admin') or '').strip()
         cotizacion_raw = request.POST.get('cotizacion_monto')
@@ -996,6 +1025,7 @@ def solicitud_confeccion_detalle(request, id):
                     return render(request, 'core/solicitud_confeccion_detalle.html', {
                         'solicitud': solicitud,
                         'estados': SolicitudConfeccion.ESTADO_CHOICES,
+                        'edicion_bloqueada': edicion_bloqueada,
                     })
                 solicitud.cotizacion_monto = precio
                 solicitud.cotizacion_aceptada = None
@@ -1011,6 +1041,7 @@ def solicitud_confeccion_detalle(request, id):
     return render(request, 'core/solicitud_confeccion_detalle.html', {
         'solicitud': solicitud,
         'estados': SolicitudConfeccion.ESTADO_CHOICES,
+        'edicion_bloqueada': edicion_bloqueada,
         **low_stock,
     })
 
