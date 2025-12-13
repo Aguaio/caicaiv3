@@ -1,4 +1,5 @@
 {% load static %}
+{% load dict_extras %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -119,6 +120,12 @@
         <section class="bg-white rounded-lg shadow p-5 sm:p-6">
           <h2 class="text-lg font-semibold mb-4">Gestión de la solicitud</h2>
 
+          {% if edicion_bloqueada %}
+            <div class="mb-4 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              Esta solicitud fue finalizada por el cliente ({{ solicitud.get_estado_display }}). No se puede editar.
+            </div>
+          {% endif %}
+
           <form method="post" class="space-y-4">
             {% csrf_token %}
 
@@ -129,15 +136,20 @@
               <select
                 name="estado"
                 id="estado-select"
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 {% if edicion_bloqueada %}bg-gray-100 cursor-not-allowed{% endif %}"
+                {% if edicion_bloqueada %}disabled{% endif %}
               >
-                {% for value, label in estados %}
-                  {% if value != 'aceptado' and value != 'cancelado' %}
-                    <option value="{{ value }}" {% if solicitud.estado == value %}selected{% endif %}>
-                      {{ label }}
-                    </option>
-                  {% endif %}
-                {% endfor %}
+                {% if edicion_bloqueada %}
+                  <option value="{{ solicitud.estado }}" selected>{{ solicitud.get_estado_display }}</option>
+                {% else %}
+                  {% for value, label in estados %}
+                    {% if value != 'aceptado' and value != 'cancelado' %}
+                      <option value="{{ value }}" {% if solicitud.estado == value %}selected{% endif %}>
+                        {{ label }}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
               </select>
             </div>
 
@@ -151,10 +163,14 @@
                 step="0.01"
                 min="0"
                 value="{{ solicitud.cotizacion_monto|default:'' }}"
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 {% if edicion_bloqueada %}bg-gray-100 cursor-not-allowed{% endif %}"
+                {% if edicion_bloqueada %}disabled{% endif %}
                 placeholder="Ej: 25000.00"
               >
-              <p class="text-xs text-gray-500 mt-1">El cliente verá este monto y podrá aceptarlo o rechazarlo.</p>
+              <p class="text-xs text-gray-500 mt-1">
+                El cliente verá este monto y podrá aceptarlo o rechazarlo.<br>
+                <span class="text-gray-700">Se mostrará como <span id="cotizacion-formateada" class="font-semibold text-gray-800">{{ solicitud.cotizacion_monto|precio_clp }}</span></span>
+              </p>
             </div>
 
             <div>
@@ -164,7 +180,8 @@
               <textarea
                 name="observaciones_admin"
                 rows="5"
-                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm"
+                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 text-sm {% if edicion_bloqueada %}bg-gray-100 cursor-not-allowed{% endif %}"
+                {% if edicion_bloqueada %}disabled{% endif %}
                 placeholder="Comentarios sobre la revisión, cotización, motivos de rechazo, etc."
               >{{ solicitud.observaciones_admin }}</textarea>
             </div>
@@ -172,7 +189,8 @@
             <div class="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 type="submit"
-                class="flex-1 bg-gray-900 text-white py-2.5 rounded-lg font-semibold hover:bg-gray-800 transition-colors text-sm"
+                class="flex-1 bg-gray-900 text-white py-2.5 rounded-lg font-semibold hover:bg-gray-800 transition-colors text-sm {% if edicion_bloqueada %}bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300{% endif %}"
+                {% if edicion_bloqueada %}disabled{% endif %}
               >
                 Guardar cambios
               </button>
@@ -197,8 +215,26 @@
 </body>
 <script>
   (function () {
+    const formLocked = {{ edicion_bloqueada|yesno:"true,false" }};
     const selectEstado = document.getElementById('estado-select');
     const wrapper = document.getElementById('cotizacion-wrapper');
+    const cotizacionInput = document.querySelector('input[name="cotizacion_monto"]');
+    const cotizacionPreview = document.getElementById('cotizacion-formateada');
+
+    const clampPrice = (val) => {
+      let cleaned = String(val || '').replace(/[^0-9.]/g, '');
+      const parts = cleaned.split('.');
+      const integer = (parts[0] || '').slice(0, 7);
+      const decimals = parts[1] ? parts[1].slice(0, 2) : '';
+      return decimals ? `${integer}.${decimals}` : integer;
+    };
+
+    const formatClp = (val) => {
+      const numberOnly = String(val || '').replace(/[^0-9]/g, '');
+      const num = Number(numberOnly || '0');
+      return '$' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    };
+
     const toggle = () => {
       if (!selectEstado || !wrapper) return;
       if (selectEstado.value === 'cotizado') {
@@ -208,8 +244,21 @@
       }
     };
     if (selectEstado) {
-      selectEstado.addEventListener('change', toggle);
+      if (!formLocked) {
+        selectEstado.addEventListener('change', toggle);
+      }
       toggle();
+    }
+
+    if (cotizacionInput && cotizacionPreview && !formLocked) {
+      cotizacionInput.addEventListener('input', (e) => {
+        const newVal = clampPrice(e.target.value);
+        if (newVal !== e.target.value) {
+          e.target.value = newVal;
+        }
+        cotizacionPreview.textContent = formatClp(newVal);
+      });
+      cotizacionPreview.textContent = formatClp(cotizacionInput.value);
     }
   })();
 </script>
