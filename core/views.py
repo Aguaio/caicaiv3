@@ -55,6 +55,9 @@ def _cart_count(request):
     carrito = request.session.get('carrito', {})
     return sum(int(q) for q in carrito.values())
 
+MAX_PRODUCT_QUANTITY = 200  # límite duro por producto en el carrito
+MAX_ORDER_TOTAL = Decimal('999999999999.99')  # límite seguro según max_digits=14, decimal_places=2
+
 
 def _low_stock_threshold(request):
     try:
@@ -1106,8 +1109,11 @@ def agregar_al_carrito(request, id):
     except ValueError:
         cantidad = 1
 
+    if cantidad > MAX_PRODUCT_QUANTITY:
+        cantidad = MAX_PRODUCT_QUANTITY
+
     key = str(id)
-    carrito[key] = carrito.get(key, 0) + cantidad
+    carrito[key] = min(carrito.get(key, 0) + cantidad, MAX_PRODUCT_QUANTITY)
     request.session['carrito'] = carrito
     count = _cart_count(request)
 
@@ -1139,6 +1145,9 @@ def actualizar_cantidad_carrito(request, id):
     if cantidad < 1:
         messages.error(request, 'La cantidad debe ser al menos 1.')
         return redirect('ver_carrito')
+    if cantidad > MAX_PRODUCT_QUANTITY:
+        cantidad = MAX_PRODUCT_QUANTITY
+        messages.warning(request, f'La cantidad por producto se limita a {MAX_PRODUCT_QUANTITY}.')
 
     carrito[key] = cantidad
     request.session['carrito'] = carrito
@@ -1162,10 +1171,25 @@ def eliminar_del_carrito(request, id):
 
 def ver_carrito(request):
     carrito = request.session.get('carrito', {})
+    # normaliza cantidades previas que superen el máximo
+    changed = False
+    for pid, cantidad in list(carrito.items()):
+        try:
+            qty = int(cantidad)
+        except (TypeError, ValueError):
+            qty = 1
+        qty = max(1, min(qty, MAX_PRODUCT_QUANTITY))
+        if qty != cantidad:
+            carrito[pid] = qty
+            changed = True
+    if changed:
+        request.session['carrito'] = carrito
+
     productos = []
     total = Decimal(0)
     faltantes = []
     allow_checkout = True
+    total_limit_exceeded = False
 
     for id, cantidad in carrito.items():
         try:
@@ -1214,12 +1238,17 @@ def ver_carrito(request):
             'comprable': stock_ok and activo_ok,
         })
 
+    if total > MAX_ORDER_TOTAL:
+        allow_checkout = False
+        total_limit_exceeded = True
+
     return render(request, 'core/carrito.html', {
         'productos': productos,
         'total': total,
         'cart_count': _cart_count(request),
         'allow_checkout': allow_checkout,
         'faltantes': faltantes,
+        'total_limit_exceeded': total_limit_exceeded,
     })
 
 
@@ -1231,6 +1260,19 @@ def confirmar_pedido(request):
         return redirect('catalogo')
 
     carrito = request.session.get('carrito', {})
+    changed = False
+    for pid, cantidad in list(carrito.items()):
+        try:
+            qty = int(cantidad)
+        except (TypeError, ValueError):
+            qty = 1
+        qty = max(1, min(qty, MAX_PRODUCT_QUANTITY))
+        if qty != cantidad:
+            carrito[pid] = qty
+            changed = True
+    if changed:
+        request.session['carrito'] = carrito
+
     if not carrito:
         messages.error(request, 'Tu carrito está vacío.')
         return redirect('catalogo')
@@ -1259,51 +1301,61 @@ def confirmar_pedido(request):
             'imagen': prod.imagen.url if getattr(prod, 'imagen', None) else '',
         })
 
+    if total_ctx > MAX_ORDER_TOTAL:
+        messages.error(request, f'El total del carrito supera el límite permitido (${MAX_ORDER_TOTAL}). Reduce la cantidad o quita productos.')
+        return redirect('ver_carrito')
+
     if request.method == 'POST':
-        with transaction.atomic():
-            # Verificación previa de stock con bloqueo de fila
-            faltantes = []
-            productos_seleccionados = {}
-            for pid, cantidad in carrito.items():
-                try:
-                    prod = Producto.objects.select_for_update().get(id=pid)
-                except Producto.DoesNotExist:
-                    faltantes.append((f'Producto #{pid} no disponible', 0, cantidad))
-                    continue
+        try:
+            with transaction.atomic():
+                # Verificación previa de stock con bloqueo de fila
+                faltantes = []
+                productos_seleccionados = {}
+                for pid, cantidad in carrito.items():
+                    try:
+                        prod = Producto.objects.select_for_update().get(id=pid)
+                    except Producto.DoesNotExist:
+                        faltantes.append((f'Producto #{pid} no disponible', 0, cantidad))
+                        continue
 
-                if not prod.activo:
-                    faltantes.append((f'{prod.nombre} (deshabilitado)', prod.stock, cantidad))
-                    continue
+                    if not prod.activo:
+                        faltantes.append((f'{prod.nombre} (deshabilitado)', prod.stock, cantidad))
+                        continue
 
-                if prod.stock < cantidad:
-                    faltantes.append((prod.nombre, prod.stock, cantidad))
-                productos_seleccionados[pid] = prod
+                    if prod.stock < cantidad:
+                        faltantes.append((prod.nombre, prod.stock, cantidad))
+                    productos_seleccionados[pid] = prod
 
-            if faltantes:
-                readable = '; '.join([f'{n} (disponible: {d}, solicitado: {c})' for n, d, c in faltantes])
-                msg = 'No hay stock suficiente para: ' + readable
-                messages.error(request, msg)
-                return redirect('ver_carrito')
+                if faltantes:
+                    readable = '; '.join([f'{n} (disponible: {d}, solicitado: {c})' for n, d, c in faltantes])
+                    msg = 'No hay stock suficiente para: ' + readable
+                    messages.error(request, msg)
+                    return redirect('ver_carrito')
 
-            cliente = request.user
-            pedido = Pedido.objects.create(
-                nombre_cliente=cliente.username,
-                correo=cliente.email,
-                direccion=cliente.direccion or 'Sin dirección',
-                total=Decimal('0')
-            )
+                cliente = request.user
+                pedido = Pedido.objects.create(
+                    nombre_cliente=cliente.username,
+                    correo=cliente.email,
+                    direccion=cliente.direccion or 'Sin dirección',
+                    total=Decimal('0')
+                )
 
-            total = Decimal('0')
-            for pid, cantidad in carrito.items():
-                prod = productos_seleccionados[pid]
-                subtotal = prod.precio * cantidad
-                total += subtotal
-                DetallePedido.objects.create(pedido=pedido, producto=prod, cantidad=cantidad, subtotal=subtotal)
-                prod.stock -= cantidad
-                prod.save()
+                total = Decimal('0')
+                for pid, cantidad in carrito.items():
+                    prod = productos_seleccionados[pid]
+                    subtotal = prod.precio * cantidad
+                    total += subtotal
+                    if total > MAX_ORDER_TOTAL:
+                        messages.error(request, f'El total del carrito supera el límite permitido (${MAX_ORDER_TOTAL}). Reduce la cantidad o quita productos.')
+                        raise transaction.TransactionManagementError("total_limit_exceeded")
+                    DetallePedido.objects.create(pedido=pedido, producto=prod, cantidad=cantidad, subtotal=subtotal)
+                    prod.stock -= cantidad
+                    prod.save()
 
-            pedido.total = total
-            pedido.save()
+                pedido.total = total
+                pedido.save()
+        except transaction.TransactionManagementError:
+            return redirect('ver_carrito')
 
         request.session['carrito'] = {}
         messages.success(request, 'Pedido confirmado correctamente.')
